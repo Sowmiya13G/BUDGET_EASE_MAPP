@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -46,6 +46,15 @@ const LoginScreen = ({navigation}) => {
     } else {
       // show error from payload if available
       alert(result.payload || 'Login Failed');
+    }
+  };
+
+  const onGoogleLogin = async () => {
+    const result = await dispatch(handleGoogleLogin());
+    if (result.meta.requestStatus === 'fulfilled') {
+      navigation.replace('Home');
+    } else {
+      alert(result.payload || 'Google Sign-In failed');
     }
   };
 
@@ -180,7 +189,7 @@ const LoginScreen = ({navigation}) => {
           or sign up with your google account
         </Text>
 
-        <TouchableOpacity style={styles.google}>
+        <TouchableOpacity style={styles.google} onPress={onGoogleLogin}>
           <FontAwesome name="google" size={widthPercentageToDP('5%')} />
         </TouchableOpacity>
       </View>
