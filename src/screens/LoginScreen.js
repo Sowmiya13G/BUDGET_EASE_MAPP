@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
+  Alert,
   StatusBar,
   StyleSheet,
   Text,
@@ -12,9 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import * as yup from 'yup';
-import { handleLogin } from '../features/auth/authSlice';
+import { handleGoogleLogin, handleLogin } from '../features/auth/authSlice';
 import { heightPercentageToDP, widthPercentageToDP } from '../utils/helpers';
 import { baseStyle, colors, sizes } from '../utils/theme';
 
@@ -27,9 +28,9 @@ const schema = yup.object().shape({
 });
 
 const LoginScreen = ({navigation}) => {
-  const {loading} = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const {
     control,
@@ -40,21 +41,28 @@ const LoginScreen = ({navigation}) => {
   });
 
   const onLogin = async data => {
+    setLoading(true);
     const result = await dispatch(handleLogin(data));
     if (result.meta.requestStatus === 'fulfilled') {
+      setLoading(false);
       navigation.replace('Home');
     } else {
-      // show error from payload if available
-      alert(result.payload || 'Login Failed');
+      setLoading(false);
+
+      Alert.alert(result.payload || 'Login Failed');
     }
   };
 
   const onGoogleLogin = async () => {
-    const result = await dispatch(handleGoogleLogin());
-    if (result.meta.requestStatus === 'fulfilled') {
-      navigation.replace('Home');
-    } else {
-      alert(result.payload || 'Google Sign-In failed');
+    try {
+      const result = await dispatch(handleGoogleLogin());
+      if (result.meta.requestStatus === 'fulfilled') {
+        // navigation.replace('Home');
+      } else {
+        Alert.alert(result.payload || 'Google Sign-In failed');
+      }
+    } catch (e) {
+      console.log('e: ', e);
     }
   };
 
@@ -127,7 +135,7 @@ const LoginScreen = ({navigation}) => {
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}>
                   <FontAwesome
-                    name={!showPassword ? 'eye' : 'eye-off'}
+                    name={!showPassword ? 'eye' : 'eye-slash'}
                     size={widthPercentageToDP('5%')}
                   />
                 </TouchableOpacity>
@@ -158,7 +166,8 @@ const LoginScreen = ({navigation}) => {
         {/* Login Button */}
         <TouchableOpacity
           onPress={handleSubmit(onLogin)}
-          style={styles.loginButton}>
+          style={styles.loginButton}
+          disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#000" />
           ) : (
@@ -172,7 +181,9 @@ const LoginScreen = ({navigation}) => {
         </TouchableOpacity>
 
         {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton}>
+        <TouchableOpacity
+          style={styles.signUpButton}
+          onPress={() => navigation.navigate('Register')}>
           <Text
             style={[
               baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.black),
@@ -186,10 +197,13 @@ const LoginScreen = ({navigation}) => {
             {textAlign: 'center', marginVertical: heightPercentageToDP('1%')},
             baseStyle.txtStyleOutPoppinMedium(sizes.size1, colors.black),
           ]}>
-          or sign up with your google account
+          or sign in with your google account
         </Text>
 
-        <TouchableOpacity style={styles.google} onPress={onGoogleLogin}>
+        <TouchableOpacity
+          style={styles.google}
+          onPress={onGoogleLogin}
+          disabled={loading}>
           <FontAwesome name="google" size={widthPercentageToDP('5%')} />
         </TouchableOpacity>
       </View>
@@ -251,12 +265,6 @@ const styles = StyleSheet.create({
     borderRadius: widthPercentageToDP('30%'),
     paddingVertical: widthPercentageToDP('4%'),
     alignItems: 'center',
-  },
-  view: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    rowGap: '3%',
   },
   google: {
     borderRadius: widthPercentageToDP('50%'),

@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">BUDGET_EASE_MAPP</string>
+    <string name="app_name">Budget Ease</string>
+    <string name="default_web_client_id">874627671403-5h01c5cj4l2mtttsl4oom0sjlelvjkpr.apps.googleusercontent.com</string>
 </resources>

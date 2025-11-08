@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "874627671403",
+    "firebase_url": "https://budgetease-d27ca-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "budgetease-d27ca",
     "storage_bucket": "budgetease-d27ca.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.budget_ease_mapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "874627671403-5h01c5cj4l2mtttsl4oom0sjlelvjkpr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.budget_ease_mapp",
+            "certificate_hash": "54b48bef6e40fee5698a58dbc31d1b6d255bd4e9"
+          }
+        },
+        {
+          "client_id": "874627671403-teee0iu69h1nr44cr2q2mfnjs5ajccsr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB_QSokbotT3uhYTSPp_dFSWUrKm5wfxdQ"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "874627671403-teee0iu69h1nr44cr2q2mfnjs5ajccsr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
