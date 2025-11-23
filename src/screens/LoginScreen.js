@@ -1,6 +1,6 @@
-import { yupResolver } from '@hookform/resolvers/yup';
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import {yupResolver} from '@hookform/resolvers/yup';
+import React, {useEffect, useState} from 'react';
+import {Controller, useForm} from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
@@ -11,13 +11,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { useDispatch } from 'react-redux';
+import {useDispatch} from 'react-redux';
 import * as yup from 'yup';
-import { handleGoogleLogin, handleLogin } from '../features/auth/authSlice';
-import { heightPercentageToDP, widthPercentageToDP } from '../utils/helpers';
-import { baseStyle, colors, sizes } from '../utils/theme';
+import {handleGoogleLogin, handleLogin} from '../features/auth/authSlice';
+import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
+import {baseStyle, colors, sizes} from '../utils/theme';
 
 const schema = yup.object().shape({
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -27,8 +27,22 @@ const schema = yup.object().shape({
     .required('Password is required'),
 });
 
-const LoginScreen = ({navigation}) => {
+import {useNavigation} from '@react-navigation/native';
+import {useSelector} from 'react-redux';
+import {clearError} from '../features/auth/authSlice';
+
+const LoginScreen = ({}) => {
+  const {user, error} = useSelector(state => state.auth);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert(error);
+      dispatch(clearError());
+    }
+  }, [error]);
+
+  const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -57,12 +71,12 @@ const LoginScreen = ({navigation}) => {
     try {
       const result = await dispatch(handleGoogleLogin());
       if (result.meta.requestStatus === 'fulfilled') {
-        // navigation.replace('Home');
+        navigation.replace('Home');
       } else {
-        Alert.alert(result.payload || 'Google Sign-In failed');
+        Alert.alert(result.payload || 'Google Login Failed');
       }
-    } catch (e) {
-      console.log('e: ', e);
+    } catch (err) {
+      console.error(err);
     }
   };
 

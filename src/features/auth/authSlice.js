@@ -1,6 +1,11 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 
-import {googleSignIn, loginUser, logoutUser, registerUser} from './authService';
+import {
+  googleSignInService,
+  loginUser,
+  logoutUser,
+  registerUser,
+} from './authService';
 
 // Register User
 
@@ -40,7 +45,7 @@ export const handleGoogleLogin = createAsyncThunk(
   'auth/googleLogin',
   async (_, thunkAPI) => {
     try {
-      const user = await googleSignIn();
+      const user = await googleSignInService();
       return user;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.message);

@@ -51,40 +51,39 @@ export const logoutUser = async () => {
 
 let signInInProgress = false;
 
-export const googleSignIn = async () => {
+export const googleSignInService = async () => {
   if (signInInProgress) return;
   signInInProgress = true;
 
   try {
-    console.log('Google Signin Config:', GoogleSignin._config);
-    // await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
-    // const {idToken} = await GoogleSignin.signIn();
-    // console.log('idToken: ', idToken);
-    // Try silent sign-in first
-    const silentUser = await GoogleSignin.signInSilently().catch(e => {
-      console.log('Silent sign-in error:', e);
-      return null; // fallback to interactive sign-in
+    await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+
+  
+    // Force account picker
+    await GoogleSignin.signOut();
+
+    const userInfo = await GoogleSignin.signIn();
+
+    console.log('userInfo: ',userInfo);
+    if (!userInfo?.data?.idToken) throw new Error('No idToken returned from Google Sign-In');
+
+    const googleCredential = GoogleAuthProvider.credential(userInfo?.data?.idToken);
+    const userCredential = await signInWithCredential(
+      firebaseAuth,
+      googleCredential,
+    );
+    console.log('userCredential: ', userCredential);
+
+    await set(ref(firebaseDatabase, `users/${userCredential.user.uid}`), {
+      name: userCredential.user.displayName,
+      email: userCredential.user.email,
+      photoURL: userCredential.user.photoURL,
+      uid: userCredential.user.uid,
+      provider: 'google',
+      createdAt: new Date().toISOString(),
     });
-    console.log('silentUser: ', silentUser);
-    // if (!idToken) throw new Error('No idToken returned from Google Sign-In');
 
-    // const googleCredential = GoogleAuthProvider.credential(idToken);
-    // const userCredential = await signInWithCredential(
-    //   firebaseAuth,
-    //   googleCredential,
-    // );
-
-    // // Save user data
-    // await set(ref(firebaseDatabase, `users/${userCredential.user.uid}`), {
-    //   name: userCredential.user.displayName,
-    //   email: userCredential.user.email,
-    //   photoURL: userCredential.user.photoURL,
-    //   uid: userCredential.user.uid,
-    //   provider: 'google',
-    //   createdAt: new Date().toISOString(),
-    // });
-
-    // return userCredential.user;
+    return userCredential.user;
   } catch (error) {
     console.error('Google Sign-In Error:', error);
     throw error;

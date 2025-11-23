@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "874627671403-5h01c5cj4l2mtttsl4oom0sjlelvjkpr.apps.googleusercontent.com",
+          "client_id": "874627671403-ech10bvufje1otg3unrqjfsputomoa32.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.budget_ease_mapp",
-            "certificate_hash": "54b48bef6e40fee5698a58dbc31d1b6d255bd4e9"
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },
         {
