@@ -187,7 +187,7 @@ export default function DashboardScreen() {
                 <View style={[styles.iconContainer, styles.incomeIconBg]}>
                   <Text style={styles.incomeIcon}>↑</Text>
                 </View>
-                <Text style={styles.cardLabel}>Total Income</Text>
+                <Text style={styles.cardLabel2}>Total Income</Text>
                 <Text style={styles.cardAmount}>
                   {formatCurrency(totalIncome)}
                 </Text>
@@ -200,7 +200,7 @@ export default function DashboardScreen() {
                 <View style={[styles.iconContainer, styles.expenseIconBg]}>
                   <Text style={styles.expenseIcon}>↓</Text>
                 </View>
-                <Text style={styles.cardLabel}>Total Expenses</Text>
+                <Text style={styles.cardLabel2}>Total Expenses</Text>
                 <Text style={styles.cardAmount}>
                   {formatCurrency(totalExpense)}
                 </Text>
@@ -317,19 +317,19 @@ const styles = StyleSheet.create({
   },
   cardsRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
   card: {
     backgroundColor: '#ffffff',
     padding: 20,
     borderRadius: 24,
-    width: 176,
+    width: 150,
   },
   incomeCard: {borderLeftWidth: 4, borderLeftColor: '#10b981'},
   expenseCard: {borderLeftWidth: 4, borderLeftColor: '#f43f5e'},
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -345,7 +345,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
-  cardAmount: {color: '#111827', fontWeight: 'bold', fontSize: 24},
+    cardLabel2: {
+    color: '#6b7280',
+    fontWeight: '600',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  cardAmount: {color: '#111827', fontWeight: 'bold', fontSize: 20},
   chartSection: {
     backgroundColor: '#ffffff',
     borderRadius: 24,
