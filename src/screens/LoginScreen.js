@@ -166,18 +166,6 @@ const LoginScreen = ({}) => {
             </Text>
           )}
         </View>
-
-        <TouchableOpacity>
-          <Text
-            style={[
-              {textAlign: 'right', textDecorationLine: 'underline'},
-              baseStyle.txtStyleOutPoppinMedium(sizes.size1, colors.black),
-            ]}>
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
-
-        {/* Login Button */}
         <TouchableOpacity
           onPress={handleSubmit(onLogin)}
           style={styles.loginButton}
@@ -193,19 +181,6 @@ const LoginScreen = ({}) => {
             </Text>
           )}
         </TouchableOpacity>
-
-        {/* Sign Up Button */}
-        <TouchableOpacity
-          style={styles.signUpButton}
-          onPress={() => navigation.navigate('Register')}>
-          <Text
-            style={[
-              baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.black),
-            ]}>
-            Sign Up
-          </Text>
-        </TouchableOpacity>
-
         <Text
           style={[
             {textAlign: 'center', marginVertical: heightPercentageToDP('1%')},

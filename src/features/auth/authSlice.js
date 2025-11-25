@@ -1,78 +1,80 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
-
 import {
   googleSignInService,
   loginUser,
   logoutUser,
   registerUser,
+  setPasswordForGoogleUser,
 } from './authService';
 
-// Register User
-
-export const handleRegister = createAsyncThunk(
-  'auth/register',
-
-  async ({email, password}, thunkAPI) => {
-    try {
-      const user = await registerUser(email, password);
-
-      return user;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
-    }
-  },
-);
-
-// Login User
-
+// Email/Password login
 export const handleLogin = createAsyncThunk(
   'auth/login',
-
   async ({email, password}, thunkAPI) => {
     try {
-      const user = await loginUser(email, password);
-
-      return user;
+      return await loginUser(email, password);
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
+      return thunkAPI.rejectWithValue(error?.message || 'Login Failed');
     }
   },
 );
 
-// Google Sign-In
+// Register user
+export const handleRegister = createAsyncThunk(
+  'auth/register',
+  async ({email, password}, thunkAPI) => {
+    try {
+      return await registerUser(email, password);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error?.message || 'Registration Failed');
+    }
+  },
+);
 
+// Google login
 export const handleGoogleLogin = createAsyncThunk(
   'auth/googleLogin',
   async (_, thunkAPI) => {
     try {
-      const user = await googleSignInService();
-      return user;
+      return await googleSignInService();
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
+      return thunkAPI.rejectWithValue(error?.message || 'Google Login Failed');
     }
   },
 );
 
-// Logout User
+// Logout
 export const handleLogout = createAsyncThunk(
   'auth/logout',
   async (_, thunkAPI) => {
     try {
       await logoutUser();
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
+      return thunkAPI.rejectWithValue(error?.message || 'Logout Failed');
+    }
+  },
+);
+
+// Set password for Google user
+export const handleSetPassword = createAsyncThunk(
+  'auth/setPassword',
+  async ({password}, thunkAPI) => {
+    try {
+      const user = thunkAPI.getState().auth.user;
+      if (!user) throw new Error('No logged in user');
+      await setPasswordForGoogleUser(user, password);
+      return {message: 'Password set successfully'};
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error?.message || 'Failed to set password',
+      );
     }
   },
 );
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: {
-    user: null,
-    loading: false,
-    error: null,
-  },
-
+  initialState: {user: null, loading: false, error: null},
   reducers: {
     clearError: state => {
       state.error = null;
@@ -81,69 +83,42 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
   },
-
   extraReducers: builder => {
     builder
-      // Register Cases
-      .addCase(handleRegister.pending, state => {
-        state.loading = true;
-        state.error = null;
-      })
-
-      .addCase(handleRegister.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload;
-      })
-
-      .addCase(handleRegister.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // Login Cases
       .addCase(handleLogin.pending, state => {
         state.loading = true;
         state.error = null;
       })
-
       .addCase(handleLogin.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
       })
-
       .addCase(handleLogin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
 
-      // Google Login Cases
       .addCase(handleGoogleLogin.pending, state => {
         state.loading = true;
         state.error = null;
       })
-
       .addCase(handleGoogleLogin.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
       })
-
       .addCase(handleGoogleLogin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
 
-      // Logout Cases
-      .addCase(handleLogout.pending, state => {
+      .addCase(handleSetPassword.pending, state => {
         state.loading = true;
         state.error = null;
       })
-
-      .addCase(handleLogout.fulfilled, state => {
+      .addCase(handleSetPassword.fulfilled, state => {
         state.loading = false;
-        state.user = null;
       })
-
-      .addCase(handleLogout.rejected, (state, action) => {
+      .addCase(handleSetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
@@ -151,5 +126,4 @@ const authSlice = createSlice({
 });
 
 export const {clearError, setUser} = authSlice.actions;
-
 export default authSlice.reducer;

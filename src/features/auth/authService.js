@@ -1,34 +1,30 @@
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import {
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithCredential,
+import { 
+  EmailAuthProvider, 
+  linkWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  GoogleAuthProvider,
+  signInWithCredential,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged
 } from 'firebase/auth';
-import {ref, set} from 'firebase/database';
-import {firebaseAuth, firebaseDatabase} from '../../services/firebaseConfig';
+import { ref, set } from 'firebase/database';
+import { firebaseAuth, firebaseDatabase } from '../../services/firebaseConfig';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+let signInInProgress = false;
 
 // Login with Email & Password
 export const loginUser = async (email, password) => {
-  const userCredential = await signInWithEmailAndPassword(
-    firebaseAuth,
-    email,
-    password,
-  );
+  const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
   return userCredential.user;
 };
 
-// Register with Email & Password
+// Register User
 export const registerUser = async (email, password) => {
-  const userCredential = await createUserWithEmailAndPassword(
-    firebaseAuth,
-    email,
-    password,
-  );
+  const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
 
-  // Store user data in Realtime Database
+  // Save user in Realtime DB
   await set(ref(firebaseDatabase, `users/${userCredential.user.uid}`), {
     email: userCredential.user.email,
     uid: userCredential.user.uid,
@@ -49,32 +45,24 @@ export const logoutUser = async () => {
   }
 };
 
-let signInInProgress = false;
-
+// Google Sign-In
 export const googleSignInService = async () => {
   if (signInInProgress) return;
   signInInProgress = true;
 
   try {
-    await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
-
-  
-    // Force account picker
-    await GoogleSignin.signOut();
-
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    await GoogleSignin.signOut(); // force account picker
     const userInfo = await GoogleSignin.signIn();
 
-    console.log('userInfo: ',userInfo);
-    if (!userInfo?.data?.idToken) throw new Error('No idToken returned from Google Sign-In');
+    if (!userInfo?.idToken) throw new Error('No idToken returned from Google');
 
-    const googleCredential = GoogleAuthProvider.credential(userInfo?.data?.idToken);
-    const userCredential = await signInWithCredential(
-      firebaseAuth,
-      googleCredential,
-    );
-    console.log('userCredential: ', userCredential);
+    const googleCredential = GoogleAuthProvider.credential(userInfo.idToken);
+    const userCredential = await signInWithCredential(firebaseAuth, googleCredential);
 
-    await set(ref(firebaseDatabase, `users/${userCredential.user.uid}`), {
+    // Write user to DB if new
+    const userRef = ref(firebaseDatabase, `users/${userCredential.user.uid}`);
+    await set(userRef, {
       name: userCredential.user.displayName,
       email: userCredential.user.email,
       photoURL: userCredential.user.photoURL,
@@ -92,12 +80,15 @@ export const googleSignInService = async () => {
   }
 };
 
-// Auth State Listener (for SplashScreen)
-export const authStateListener = callback => {
-  return onAuthStateChanged(firebaseAuth, callback);
+// Set password for Google user
+export const setPasswordForGoogleUser = async (user, newPassword) => {
+  if (!user.email) throw new Error('No email found for this user');
+  const credential = EmailAuthProvider.credential(user.email, newPassword);
+  return linkWithCredential(user, credential);
 };
 
-// Get Current User
-export const getCurrentUser = () => {
-  return firebaseAuth.currentUser;
-};
+// Auth state listener
+export const authStateListener = callback => onAuthStateChanged(firebaseAuth, callback);
+
+// Get current user
+export const getCurrentUser = () => firebaseAuth.currentUser;
