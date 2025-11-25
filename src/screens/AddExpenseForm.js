@@ -1,13 +1,30 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import React, { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { firebaseDatabase } from '../../firebase.config';
+import React, {useState} from 'react';
+import {
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {firebaseDatabase} from '../../firebase.config';
+import {heightPercentageToDP} from '../utils/helpers';
+import {colors} from '../utils/theme';
+import Dropdown from '../components/Dropdown';
 
-const AddExpenseScreen = ({ navigation }) => {
+const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
+const optionsCategory = [
+  'Food & Groceries',
+  'Bills & Utilities',
+  'Education',
+  'Healthcare',
+  'Transport',
+];
+
+const AddExpenseScreen = ({navigation}) => {
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [paidBy, setPaidBy] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -23,11 +40,12 @@ const AddExpenseScreen = ({ navigation }) => {
       .ref('/expenses')
       .push({
         title,
-        date: date.toLocaleDateString(),
+        date: new Date().toISOString(),
         paidBy,
         category,
         description,
         amount: parseFloat(amount),
+        createdAt: new Date().toISOString(),
       })
       .then(() => {
         Alert.alert('Success', 'Expense Added Successfully!');
@@ -39,114 +57,117 @@ const AddExpenseScreen = ({ navigation }) => {
       });
   };
 
-  return (
-    <ScrollView className="flex-1 bg-gray-50 p-5">
-      <Text className="text-3xl font-bold mb-6 text-center text-gray-800">Add Expense</Text>
+  const renderBody = () => {
+    return (
+      <View
+        style={styles.container}
+        contentContainerStyle={{paddingBottom: 32}}>
+        <Text style={styles.heading}>Add Expense</Text>
 
-      {/* Expense Title */}
-      <View className="bg-white rounded-xl shadow p-4 mb-4">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Expense Title</Text>
-        </View>
+        <Text style={styles.label}>Expense Title</Text>
         <TextInput
-          className="border border-gray-300 rounded-lg p-3"
+          style={styles.input}
           placeholder="Grocery Shopping"
+          placeholderTextColor="#9CA3AF"
           value={title}
           onChangeText={setTitle}
         />
-      </View>
 
-      {/* Date Picker */}
-      {/* <View className="bg-white rounded-xl shadow p-4 mb-4">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Date of Expense</Text>
-        </View>
-        <TouchableOpacity
-          className="border border-gray-300 rounded-lg p-3 flex-row justify-between items-center"
-          onPress={() => setShowDatePicker(true)}>
-          <Text>{date.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) setDate(selectedDate);
-            }}
-          />
-        )}
-      </View>
+        <Dropdown
+          label="Paid By"
+          options={optionsPaidBy}
+          selectedValue={paidBy}
+          onValueChange={setPaidBy}
+        />
 
-      <View className="bg-white rounded-xl shadow p-4 mb-4">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Paid By</Text>
-        </View>
-        <View className="border border-gray-300 rounded-lg">
-          <Picker selectedValue={paidBy} onValueChange={itemValue => setPaidBy(itemValue)}>
-            <Picker.Item label="Select" value="" />
-            <Picker.Item label="Father" value="Father" />
-            <Picker.Item label="Mother" value="Mother" />
-            <Picker.Item label="Son" value="Son" />
-            <Picker.Item label="Daughter" value="Daughter" />
-          </Picker>
-        </View>
-      </View> */}
+        <Dropdown
+          label="Category"
+          options={optionsCategory}
+          selectedValue={category}
+          onValueChange={setCategory}
+        />
 
-      {/* Category */}
-      <View className="bg-white rounded-xl shadow p-4 mb-4">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Category</Text>
-        </View>
-        <View className="border border-gray-300 rounded-lg">
-          <Picker selectedValue={category} onValueChange={itemValue => setCategory(itemValue)}>
-            <Picker.Item label="Select Category" value="" />
-            <Picker.Item label="Food & Groceries" value="Food & Groceries" />
-            <Picker.Item label="Bills & Utilities" value="Bills" />
-            <Picker.Item label="Education" value="Education" />
-            <Picker.Item label="Healthcare" value="Medical" />
-            <Picker.Item label="Transport" value="Transport" />
-          </Picker>
-        </View>
-      </View>
-
-      {/* Description */}
-      <View className="bg-white rounded-xl shadow p-4 mb-4">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Description</Text>
-        </View>
+        <Text style={styles.label}>Description</Text>
         <TextInput
-          className="border border-gray-300 rounded-lg p-3 h-24 text-gray-700"
+          style={[styles.input, styles.textArea]}
           placeholder="Details..."
+          placeholderTextColor="#9CA3AF"
           value={description}
           onChangeText={setDescription}
           multiline
         />
-      </View>
 
-      {/* Amount */}
-      <View className="bg-white rounded-xl shadow p-4 mb-6">
-        <View className="flex-row items-center mb-2">
-          <Text className="ml-2 text-gray-700 font-semibold">Expense Amount</Text>
-        </View>
+        <Text style={styles.label}>Expense Amount</Text>
         <TextInput
-          className="border border-gray-300 rounded-lg p-3"
+          style={styles.input}
           placeholder="₹2,350"
+          placeholderTextColor="#9CA3AF"
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
         />
-      </View>
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        className="bg-gradient-to-r from-blue-500 to-blue-700 p-4 rounded-xl shadow-lg"
-        onPress={handleAddExpense}>
-        <Text className="text-center text-white font-bold text-lg">Add Expense</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleAddExpense}>
+          <Text style={styles.buttonText}>Add Expense</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+  return (
+    <ScrollView
+      style={{flex: 1}}
+      contentContainerStyle={{paddingBottom: 32}}
+      keyboardShouldPersistTaps="handled">
+      {renderBody()}
     </ScrollView>
   );
 };
 
 export default AddExpenseScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#1F2937',
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 16,
+    color: '#374151',
+    marginBottom: heightPercentageToDP('1%'),
+    fontWeight: '600',
+    marginTop: heightPercentageToDP('1.5%'),
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  button: {
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 32,
+    marginTop: heightPercentageToDP('2%'),
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});

@@ -1,5 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import {useNavigation} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
 import {
   Dimensions,
   Modal,
@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LineChart, PieChart } from 'react-native-chart-kit';
+import {LineChart, PieChart} from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { firebaseDatabase } from '../../firebase.config';
-import { heightPercentageToDP, widthPercentageToDP } from '../utils/helpers';
-import { baseStyle, colors, sizes } from '../utils/theme';
+import {firebaseDatabase} from '../../firebase.config';
+import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
+import {baseStyle, colors, sizes} from '../utils/theme';
 
 export default function DashboardScreen() {
   const [transactions, setTransactions] = useState([]);
@@ -111,14 +111,14 @@ export default function DashboardScreen() {
           style={styles.modalOverlay}
           onPress={() => setMenuVisible(false)}>
           <View style={styles.menuContainer}>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
                 setMenuVisible(false);
-                navigation.navigate('UpdatePassword'); // Link to your screen
+                navigation.navigate('UpdatePassword'); 
               }}>
               <Text style={styles.menuText}>Update Password</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <View style={styles.menuDivider} />
 
