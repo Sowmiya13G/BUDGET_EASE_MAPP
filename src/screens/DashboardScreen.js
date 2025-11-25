@@ -76,7 +76,7 @@ export default function DashboardScreen() {
       amount: categoryTotals[key],
       color: categoryColors[key] || `hsl(${(index * 45) % 360}, 65%, 55%)`,
       legendFontColor: '#374151',
-      legendFontSize: 13,
+      legendFontSize: 11,
     }));
 
   const formatCurrency = amount => {
@@ -220,10 +220,10 @@ export default function DashboardScreen() {
             <PieChart
               data={pieData}
               width={Dimensions.get('window').width - 80}
-              height={240}
+              height={170}
               accessor={'amount'}
               backgroundColor={'transparent'}
-              paddingLeft={'15'}
+              // paddingLeft={'15'}
               absolute
               chartConfig={{
                 color: opacity => `rgba(0, 0, 0, ${opacity})`,

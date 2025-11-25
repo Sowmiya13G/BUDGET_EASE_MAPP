@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
 import {
   Alert,
-  FlatList,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {firebaseDatabase} from '../../firebase.config';
+import {useDispatch} from 'react-redux';
+import Dropdown from '../components/Dropdown';
+import {addExpense} from '../features/budget/budgetSlice';
 import {heightPercentageToDP} from '../utils/helpers';
 import {colors} from '../utils/theme';
-import Dropdown from '../components/Dropdown';
 
 const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
 const optionsCategory = [
@@ -24,113 +26,107 @@ const optionsCategory = [
 ];
 
 const AddExpenseScreen = ({navigation}) => {
+  const dispatch = useDispatch();
   const [title, setTitle] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     if (!title || !amount || !category || !paidBy) {
-      Alert.alert('Error', 'Please fill all required fields');
+      Alert.alert('Please fill all required fields');
       return;
     }
 
-    firebaseDatabase
-      .ref('/expenses')
-      .push({
-        title,
-        date: new Date().toISOString(),
-        paidBy,
-        category,
-        description,
-        amount: parseFloat(amount),
-        createdAt: new Date().toISOString(),
-      })
-      .then(() => {
-        Alert.alert('Success', 'Expense Added Successfully!');
+    const expenseData = {
+      title,
+      date: new Date().toISOString(),
+      paidBy,
+      category,
+      description,
+      amount: parseFloat(amount),
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await dispatch(addExpense({expense: expenseData})).unwrap();
+      Alert.alert('Expense Added Successfully!');
+      setTimeout(() => {
         navigation.goBack();
-      })
-      .catch(error => {
-        Alert.alert('Error', 'Failed to add expense');
-        console.error(error);
-      });
+      }, 5000);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to add expense');
+      console.error(err);
+    }
   };
 
-  const renderBody = () => {
-    return (
-      <View
-        style={styles.container}
-        contentContainerStyle={{paddingBottom: 32}}>
-        <Text style={styles.heading}>Add Expense</Text>
-
-        <Text style={styles.label}>Expense Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Grocery Shopping"
-          placeholderTextColor="#9CA3AF"
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <Dropdown
-          label="Paid By"
-          options={optionsPaidBy}
-          selectedValue={paidBy}
-          onValueChange={setPaidBy}
-        />
-
-        <Dropdown
-          label="Category"
-          options={optionsCategory}
-          selectedValue={category}
-          onValueChange={setCategory}
-        />
-
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Details..."
-          placeholderTextColor="#9CA3AF"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        <Text style={styles.label}>Expense Amount</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="₹2,350"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-          value={amount}
-          onChangeText={setAmount}
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleAddExpense}>
-          <Text style={styles.buttonText}>Add Expense</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={{flex: 1}}
-      contentContainerStyle={{paddingBottom: 32}}
-      keyboardShouldPersistTaps="handled">
-      {renderBody()}
-    </ScrollView>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        style={{flex: 1}}
+        contentContainerStyle={{paddingBottom: 32}}
+        keyboardShouldPersistTaps="handled">
+        <View style={styles.container}>
+          <Text style={styles.heading}>Add Expense</Text>
+
+          <Text style={styles.label}>Expense Title</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Grocery Shopping"
+            placeholderTextColor="#9CA3AF"
+            value={title}
+            onChangeText={setTitle}
+          />
+
+          <Dropdown
+            label="Paid By"
+            options={optionsPaidBy}
+            selectedValue={paidBy}
+            onValueChange={setPaidBy}
+          />
+          <Dropdown
+            label="Category"
+            options={optionsCategory}
+            selectedValue={category}
+            onValueChange={setCategory}
+          />
+
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Details..."
+            placeholderTextColor="#9CA3AF"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+
+          <Text style={styles.label}>Expense Amount</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹2,350"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            value={amount}
+            onChangeText={setAmount}
+          />
+
+          <TouchableOpacity style={styles.button} onPress={handleAddExpense}>
+            <Text style={styles.buttonText}>Add Expense</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 export default AddExpenseScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    padding: 16,
-  },
+  container: {flex: 1, backgroundColor: '#F3F4F6', padding: 16},
   heading: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -153,10 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#F9FAFB',
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
+  textArea: {height: 100, textAlignVertical: 'top'},
   button: {
     backgroundColor: colors.primary,
     paddingVertical: 16,

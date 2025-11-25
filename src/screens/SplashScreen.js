@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   StatusBar,
@@ -6,29 +6,33 @@ import {
   Text,
   View,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import {useDispatch} from 'react-redux';
-import {setUser} from '../features/auth/authSlice';
-import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
-import {baseStyle, colors, sizes} from '../utils/theme';
-import {authStateListener} from '../features/auth/authService';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../features/auth/authSlice';
+import { heightPercentageToDP, widthPercentageToDP } from '../utils/helpers';
+import { baseStyle, colors, sizes } from '../utils/theme';
+import { authStateListener } from '../features/auth/authService';
 
-const SplashScreen = ({navigation}) => {
+const SplashScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Listen to auth state changes
     const unsubscribe = authStateListener(user => {
       if (user) {
-        // User is signed in
-        dispatch(setUser(user));
+        // 🔹 Extract only serializable user data
+        const sanitizedUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+        };
+
+        dispatch(setUser(sanitizedUser));
+
         setTimeout(() => {
           navigation.replace('Home');
-          // navigation.replace('Login');
-
         }, 2000);
       } else {
-        // User is signed out
         dispatch(setUser(null));
         setTimeout(() => {
           navigation.replace('Login');
@@ -36,7 +40,6 @@ const SplashScreen = ({navigation}) => {
       }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [dispatch, navigation]);
 
