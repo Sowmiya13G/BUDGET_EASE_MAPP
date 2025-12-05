@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
 import {
   ActivityIndicator,
   StatusBar,
@@ -6,42 +6,25 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
-import { setUser } from '../features/auth/authSlice';
-import { heightPercentageToDP, widthPercentageToDP } from '../utils/helpers';
-import { baseStyle, colors, sizes } from '../utils/theme';
-import { authStateListener } from '../features/auth/authService';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
+import {baseStyle, colors, sizes} from '../utils/theme';
+import {authStateListener} from '../features/authService';
 
-const SplashScreen = ({ navigation }) => {
-  const dispatch = useDispatch();
-
+const SplashScreen = ({navigation}) => {
   useEffect(() => {
     const unsubscribe = authStateListener(user => {
-      if (user) {
-        // 🔹 Extract only serializable user data
-        const sanitizedUser = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
-        };
-
-        dispatch(setUser(sanitizedUser));
-
-        setTimeout(() => {
+      setTimeout(() => {
+        if (user) {
           navigation.replace('Home');
-        }, 2000);
-      } else {
-        dispatch(setUser(null));
-        setTimeout(() => {
+        } else {
           navigation.replace('Login');
-        }, 2000);
-      }
+        }
+      }, 2000);
     });
 
     return () => unsubscribe();
-  }, [dispatch, navigation]);
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>

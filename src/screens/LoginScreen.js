@@ -1,6 +1,4 @@
-import {yupResolver} from '@hookform/resolvers/yup';
 import React, {useEffect, useState} from 'react';
-import {Controller, useForm} from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
@@ -13,9 +11,11 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import {useDispatch} from 'react-redux';
+import {useNavigation} from '@react-navigation/native';
+import {Controller, useForm} from 'react-hook-form';
+import {yupResolver} from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import {handleGoogleLogin, handleLogin} from '../features/auth/authSlice';
+import {loginUser, googleSignInService} from '../features/authService';
 import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
 import {baseStyle, colors, sizes} from '../utils/theme';
 
@@ -27,21 +27,7 @@ const schema = yup.object().shape({
     .required('Password is required'),
 });
 
-import {useNavigation} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
-import {clearError} from '../features/auth/authSlice';
-
-const LoginScreen = ({}) => {
-  const {user, error} = useSelector(state => state.auth);
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (error) {
-      Alert.alert(error);
-      dispatch(clearError());
-    }
-  }, [error]);
-
+const LoginScreen = () => {
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,27 +42,25 @@ const LoginScreen = ({}) => {
 
   const onLogin = async data => {
     setLoading(true);
-    const result = await dispatch(handleLogin(data));
-    if (result.meta.requestStatus === 'fulfilled') {
+    try {
+      await loginUser(data.email, data.password);
       setLoading(false);
       navigation.replace('Home');
-    } else {
+    } catch (error) {
       setLoading(false);
-
-      Alert.alert(result.payload || 'Login Failed');
+      Alert.alert(error.message || 'Login Failed');
     }
   };
 
   const onGoogleLogin = async () => {
+    setLoading(true);
     try {
-      const result = await dispatch(handleGoogleLogin());
-      if (result.meta.requestStatus === 'fulfilled') {
-        navigation.replace('Home');
-      } else {
-        Alert.alert(result.payload || 'Google Login Failed');
-      }
-    } catch (err) {
-      console.error(err);
+      await googleSignInService();
+      setLoading(false);
+      navigation.replace('Home');
+    } catch (error) {
+      setLoading(false);
+      Alert.alert(error.message || 'Google Login Failed');
     }
   };
 
@@ -166,6 +150,8 @@ const LoginScreen = ({}) => {
             </Text>
           )}
         </View>
+
+        {/* Login Button */}
         <TouchableOpacity
           onPress={handleSubmit(onLogin)}
           style={styles.loginButton}
@@ -181,6 +167,7 @@ const LoginScreen = ({}) => {
             </Text>
           )}
         </TouchableOpacity>
+
         <Text
           style={[
             {textAlign: 'center', marginVertical: heightPercentageToDP('1%')},
@@ -201,14 +188,8 @@ const LoginScreen = ({}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.primary,
-  },
-  header: {
-    alignItems: 'center',
-    marginVertical: heightPercentageToDP('7%'),
-  },
+  container: {flex: 1, backgroundColor: colors.primary},
+  header: {alignItems: 'center', marginVertical: heightPercentageToDP('7%')},
   formContainer: {
     flex: 1,
     backgroundColor: colors.cream_5F0,
@@ -236,24 +217,13 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingHorizontal: 20,
   },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 14,
-    color: '#000',
-  },
+  passwordInput: {flex: 1, paddingVertical: 16, fontSize: 14, color: '#000'},
   loginButton: {
     backgroundColor: colors.primary,
     borderRadius: widthPercentageToDP('30%'),
     paddingVertical: widthPercentageToDP('4%'),
     alignItems: 'center',
     marginVertical: heightPercentageToDP('3%'),
-  },
-  signUpButton: {
-    backgroundColor: colors.cream_DE5,
-    borderRadius: widthPercentageToDP('30%'),
-    paddingVertical: widthPercentageToDP('4%'),
-    alignItems: 'center',
   },
   google: {
     borderRadius: widthPercentageToDP('50%'),

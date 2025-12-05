@@ -1,6 +1,4 @@
- 
-// services/budgetService.js
-import {firebaseDatabase} from '../../firebase.config';
+import { firebaseDatabase } from '../../firebase.config';
 
 const BUDGET_REF = '/expenses';
 
@@ -43,4 +41,4 @@ const budgetService = {
   },
 };
 
-export default budgetService;
+export default budgetService

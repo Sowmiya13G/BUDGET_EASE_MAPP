@@ -22,9 +22,10 @@ export default function DashboardScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const navigation = useNavigation();
 
+  // Fetch expenses directly from Firebase Realtime DB
   useEffect(() => {
     const ref = firebaseDatabase.ref('/expenses');
-    ref.on('value', snapshot => {
+    const listener = ref.on('value', snapshot => {
       const data = snapshot.val() || {};
       const list = Object.keys(data).map(key => ({
         id: key,
@@ -45,13 +46,14 @@ export default function DashboardScreen() {
       setTotalExpense(expense);
     });
 
-    return () => ref.off();
+    return () => ref.off('value', listener);
   }, []);
 
   const savings = totalIncome - totalExpense;
   const savingsRate =
     totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : 0;
 
+  // Compute totals per category
   const categoryTotals = transactions.reduce((acc, item) => {
     acc[item.category] = (acc[item.category] || 0) + item.amount;
     return acc;
@@ -79,13 +81,12 @@ export default function DashboardScreen() {
       legendFontSize: 11,
     }));
 
-  const formatCurrency = amount => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatCurrency = amount =>
+    new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
-  };
 
   const getBudgetHealthStyle = () => {
     if (savingsRate > 20) return styles.healthExcellent;
@@ -101,7 +102,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Modal for 3-Dots Menu */}
+      {/* 3-Dots Menu */}
       <Modal
         transparent={true}
         animationType="fade"
@@ -111,17 +112,7 @@ export default function DashboardScreen() {
           style={styles.modalOverlay}
           onPress={() => setMenuVisible(false)}>
           <View style={styles.menuContainer}>
-            {/* <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.navigate('UpdatePassword'); 
-              }}>
-              <Text style={styles.menuText}>Update Password</Text>
-            </TouchableOpacity> */}
-
             <View style={styles.menuDivider} />
-
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
@@ -151,7 +142,6 @@ export default function DashboardScreen() {
           Track your financial health
         </Text>
 
-        {/* 3-Dots Menu */}
         <TouchableOpacity
           style={styles.menuIcon}
           onPress={() => setMenuVisible(true)}>
@@ -159,21 +149,20 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Add Expense Button */}
+      {/* Content */}
       <View style={styles.contentContainer}>
-        <View style={styles.chartContainer}>
-          <TouchableOpacity
-            style={styles.expenseButton}
-            onPress={() => navigation.navigate('AddExpenseForm')}>
-            <Text
-              style={[
-                baseStyle.txtStyleOutPoppinSemiBold(sizes.size2, colors.black),
-                {textAlign: 'center'},
-              ]}>
-              Add Expense
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Add Expense Button */}
+        <TouchableOpacity
+          style={styles.expenseButton}
+          onPress={() => navigation.navigate('AddExpenseForm')}>
+          <Text
+            style={[
+              baseStyle.txtStyleOutPoppinSemiBold(sizes.size2, colors.black),
+              {textAlign: 'center'},
+            ]}>
+            Add Expense
+          </Text>
+        </TouchableOpacity>
 
         {/* Summary Cards */}
         <ScrollView
@@ -181,35 +170,29 @@ export default function DashboardScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.cardsScrollView}>
           <View style={styles.cardsRow}>
-            {/* Income Card */}
-            <TouchableOpacity activeOpacity={0.9}>
-              <View style={[styles.card, styles.incomeCard]}>
-                <View style={[styles.iconContainer, styles.incomeIconBg]}>
-                  <Text style={styles.incomeIcon}>↑</Text>
-                </View>
-                <Text style={styles.cardLabel2}>Total Income</Text>
-                <Text style={styles.cardAmount}>
-                  {formatCurrency(totalIncome)}
-                </Text>
+            <View style={[styles.card, styles.incomeCard]}>
+              <View style={[styles.iconContainer, styles.incomeIconBg]}>
+                <Text style={styles.incomeIcon}>↑</Text>
               </View>
-            </TouchableOpacity>
+              <Text style={styles.cardLabel2}>Total Income</Text>
+              <Text style={styles.cardAmount}>
+                {formatCurrency(totalIncome)}
+              </Text>
+            </View>
 
-            {/* Expense Card */}
-            <TouchableOpacity activeOpacity={0.9}>
-              <View style={[styles.card, styles.expenseCard]}>
-                <View style={[styles.iconContainer, styles.expenseIconBg]}>
-                  <Text style={styles.expenseIcon}>↓</Text>
-                </View>
-                <Text style={styles.cardLabel2}>Total Expenses</Text>
-                <Text style={styles.cardAmount}>
-                  {formatCurrency(totalExpense)}
-                </Text>
+            <View style={[styles.card, styles.expenseCard]}>
+              <View style={[styles.iconContainer, styles.expenseIconBg]}>
+                <Text style={styles.expenseIcon}>↓</Text>
               </View>
-            </TouchableOpacity>
+              <Text style={styles.cardLabel2}>Total Expenses</Text>
+              <Text style={styles.cardAmount}>
+                {formatCurrency(totalExpense)}
+              </Text>
+            </View>
           </View>
         </ScrollView>
 
-        {/* Pie Chart Section */}
+        {/* Pie Chart */}
         <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Expense Breakdown</Text>
@@ -223,11 +206,8 @@ export default function DashboardScreen() {
               height={170}
               accessor={'amount'}
               backgroundColor={'transparent'}
-              // paddingLeft={'15'}
               absolute
-              chartConfig={{
-                color: opacity => `rgba(0, 0, 0, ${opacity})`,
-              }}
+              chartConfig={{color: opacity => `rgba(0, 0, 0, ${opacity})`}}
             />
           ) : (
             <View style={styles.emptyState}>
@@ -268,9 +248,7 @@ export default function DashboardScreen() {
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Average Daily Expense</Text>
               <Text style={styles.statValue}>
-                {formatCurrency(
-                  transactions.length > 0 ? totalExpense / 30 : 0,
-                )}
+                {formatCurrency(transactions.length ? totalExpense / 30 : 0)}
               </Text>
             </View>
             <View style={styles.statDivider} />
@@ -345,7 +323,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
-    cardLabel2: {
+  cardLabel2: {
     color: '#6b7280',
     fontWeight: '600',
     fontSize: 12,
