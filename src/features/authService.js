@@ -1,16 +1,17 @@
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
+  createUserWithEmailAndPassword,
   EmailAuthProvider,
+  GoogleAuthProvider,
   linkWithCredential,
+  onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
-  GoogleAuthProvider,
-  signInWithCredential,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
 } from 'firebase/auth';
-import {ref, set} from 'firebase/database';
-import {firebaseAuth, firebaseDatabase} from '../../services/firebaseConfig';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import { ref, set } from 'firebase/database';
+import { firebaseAuth, firebaseDatabase } from '../services/firebaseConfig';
+
 
 let signInInProgress = false;
 
@@ -23,19 +24,34 @@ export const loginUser = async (email, password) => {
   return userCredential.user;
 };
 
-export const registerUser = async (email, password) => {
-  const userCredential = await createUserWithEmailAndPassword(
-    firebaseAuth,
-    email,
-    password,
-  );
-  await set(ref(firebaseDatabase, `users/${userCredential.user.uid}`), {
-    email: userCredential.user.email,
-    uid: userCredential.user.uid,
-    provider: 'email',
-    createdAt: new Date().toISOString(),
-  });
-  return userCredential.user;
+/**
+ * Registers a new user with email and password, and stores user info in Realtime Database
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @param {string} name - User name
+ * @returns {Promise<object>} - Firebase User object
+ */
+export const registerUser = async (email, password, name) => {
+  try {
+    // Create user with email & password
+    const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+
+    // Save user info in Realtime Database
+    const userRef = ref(firebaseDatabase, `users/${userCredential.user.uid}`);
+    await set(userRef, {
+      name: name || userCredential.user.displayName || '',
+      email: userCredential.user.email,
+      uid: userCredential.user.uid,
+      provider: 'email',
+      createdAt: new Date().toISOString(),
+    });
+
+    return userCredential.user;
+  } catch (error) {
+    // Firebase-specific errors can be caught here
+    console.error('Error registering user:', error);
+    throw new Error(error.message || 'Registration Failed');
+  }
 };
 
 export const logoutUser = async () => {

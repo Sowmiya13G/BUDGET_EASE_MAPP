@@ -15,19 +15,24 @@ import {useNavigation} from '@react-navigation/native';
 import {Controller, useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import {loginUser, googleSignInService} from '../features/authService';
+import {registerUser} from '../features/authService';
 import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
 import {baseStyle, colors, sizes} from '../utils/theme';
 
 const schema = yup.object().shape({
+  name: yup.string().required('Name is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
   password: yup
     .string()
     .min(6, 'Password must be at least 6 characters')
     .required('Password is required'),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref('password'), null], 'Passwords must match')
+    .required('Confirm Password is required'),
 });
 
-const LoginScreen = () => {
+const RegisterScreen = () => {
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,27 +45,18 @@ const LoginScreen = () => {
     resolver: yupResolver(schema),
   });
 
-  const onLogin = async data => {
+  const onRegister = async data => {
     setLoading(true);
     try {
-      await loginUser(data.email, data.password);
+      await registerUser(data.email, data.password, data.name);
       setLoading(false);
-      navigation.replace('Home');
+      Alert.alert('Registration Successful', 'You can now login', [
+        {text: 'OK', onPress: () => navigation.replace('Login')},
+      ]);
     } catch (error) {
+      console.log('error: ', error);
       setLoading(false);
-      Alert.alert(error.message || 'Login Failed');
-    }
-  };
-
-  const onGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      await googleSignInService();
-      setLoading(false);
-      navigation.replace('Home');
-    } catch (error) {
-      setLoading(false);
-      Alert.alert(error.message || 'Google Login Failed');
+      Alert.alert(error.message || 'Registration Failed');
     }
   };
 
@@ -70,11 +66,43 @@ const LoginScreen = () => {
       <View style={styles.header}>
         <Text
           style={[baseStyle.txtStyleOutPoppinBold(sizes.size5, colors.black)]}>
-          Welcome
+          Register
         </Text>
       </View>
 
       <View style={styles.formContainer}>
+        {/* Name Field */}
+        <View style={styles.inputGroup}>
+          <Text
+            style={[
+              baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.black),
+            ]}>
+            Name
+          </Text>
+          <Controller
+            control={control}
+            name="name"
+            render={({field: {value, onChange}}) => (
+              <TextInput
+                style={styles.input}
+                placeholder="Your Name"
+                placeholderTextColor={colors.placeholder}
+                value={value}
+                onChangeText={onChange}
+              />
+            )}
+          />
+          {errors.name && (
+            <Text
+              style={[
+                baseStyle.txtStyleOutPoppinRegular(sizes.size01, colors.red),
+                {marginTop: heightPercentageToDP('0.5%')},
+              ]}>
+              {errors.name.message}
+            </Text>
+          )}
+        </View>
+
         {/* Email Field */}
         <View style={styles.inputGroup}>
           <Text
@@ -151,22 +179,43 @@ const LoginScreen = () => {
           )}
         </View>
 
-        {/* Forgot Password Button */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ForgotPassword')}
-          style={styles.forgotPasswordBtn}>
+        {/* Confirm Password Field */}
+        <View style={styles.inputGroup}>
           <Text
             style={[
-              baseStyle.txtStyleOutPoppinMedium(sizes.size1, colors.primary),
+              baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.black),
             ]}>
-            Forgot Password?
+            Confirm Password
           </Text>
-        </TouchableOpacity>
+          <Controller
+            control={control}
+            name="confirmPassword"
+            render={({field: {value, onChange}}) => (
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.placeholder}
+                secureTextEntry={!showPassword}
+                value={value}
+                onChangeText={onChange}
+              />
+            )}
+          />
+          {errors.confirmPassword && (
+            <Text
+              style={[
+                baseStyle.txtStyleOutPoppinRegular(sizes.size01, colors.red),
+                {marginTop: heightPercentageToDP('0.5%')},
+              ]}>
+              {errors.confirmPassword.message}
+            </Text>
+          )}
+        </View>
 
-        {/* Login Button */}
+        {/* Register Button */}
         <TouchableOpacity
-          onPress={handleSubmit(onLogin)}
-          style={styles.loginButton}
+          onPress={handleSubmit(onRegister)}
+          style={styles.registerButton}
           disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#000" />
@@ -175,46 +224,29 @@ const LoginScreen = () => {
               style={[
                 baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.black),
               ]}>
-              Log In
+              Register
             </Text>
           )}
         </TouchableOpacity>
 
-        {/* Google Login */}
         <Text
           style={[
             {textAlign: 'center', marginVertical: heightPercentageToDP('1%')},
             baseStyle.txtStyleOutPoppinMedium(sizes.size1, colors.black),
           ]}>
-          or sign in with your google account
+          Already have an account? Login
         </Text>
 
         <TouchableOpacity
-          style={styles.google}
-          onPress={onGoogleLogin}
-          disabled={loading}>
-          <FontAwesome name="google" size={widthPercentageToDP('5%')} />
-        </TouchableOpacity>
-
-        {/* Register Button */}
-        <View style={styles.registerContainer}>
+          onPress={() => navigation.replace('Login')}
+          style={styles.loginLink}>
           <Text
-            style={baseStyle.txtStyleOutPoppinMedium(
-              sizes.size1,
-              colors.black,
-            )}>
-            Don't have an account?
+            style={[
+              baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.primary),
+            ]}>
+            Login
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text
-              style={[
-                baseStyle.txtStyleOutPoppinMedium(sizes.size2, colors.primary),
-                {marginLeft: 5},
-              ]}>
-              Register
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -251,31 +283,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   passwordInput: {flex: 1, paddingVertical: 16, fontSize: 14, color: '#000'},
-  forgotPasswordBtn: {
-    alignSelf: 'flex-end',
-    marginVertical: heightPercentageToDP('1%'),
-  },
-  loginButton: {
+  registerButton: {
     backgroundColor: colors.primary,
     borderRadius: widthPercentageToDP('30%'),
     paddingVertical: widthPercentageToDP('4%'),
     alignItems: 'center',
     marginVertical: heightPercentageToDP('3%'),
   },
-  google: {
-    borderRadius: widthPercentageToDP('50%'),
-    borderColor: colors.black,
-    borderWidth: widthPercentageToDP('0.25%'),
-    paddingVertical: widthPercentageToDP('3%'),
-    paddingHorizontal: widthPercentageToDP('3.5%'),
-    alignSelf: 'center',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: heightPercentageToDP('2%'),
-    alignItems: 'center',
-  },
+  loginLink: {alignSelf: 'center', marginTop: heightPercentageToDP('1%')},
 });
 
-export default LoginScreen;
+export default RegisterScreen;

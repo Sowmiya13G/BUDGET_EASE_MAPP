@@ -1,35 +1,30 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
-import { Provider } from 'react-redux';
-import store from './src/app/store';
+import React from 'react';
 import AddExpenseForm from './src/screens/AddExpenseForm';
 import DashboardScreen from './src/screens/DashboardScreen';
+import { default as ForgotPasswordScreen, default as ResetPasswordScreen } from './src/screens/ForgotPasswordScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import SplashScreen from './src/screens/SplashScreen';
-import { configureGoogleSignIn } from './src/services/googleSignIn.config';
 
 const Stack = createNativeStackNavigator();
 
 const App = () => {
-  useEffect(() => {
-    configureGoogleSignIn();
-  }, []);
-
   return (
-    <Provider store={store}>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{headerShown: false}}
-          initialRouteName="Splash">
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Home" component={DashboardScreen} />
-          <Stack.Screen name="AddExpenseForm" component={AddExpenseForm} />
-
-        </Stack.Navigator>
-      </NavigationContainer>
-    </Provider>
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{headerShown: false}}
+        initialRouteName="Splash">
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="Home" component={DashboardScreen} />
+        <Stack.Screen name="AddExpenseForm" component={AddExpenseForm} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 

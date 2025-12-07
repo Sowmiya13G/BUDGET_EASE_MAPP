@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef} from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -10,9 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {useDispatch} from 'react-redux';
-import Dropdown from '../components/Dropdown';
-import {addExpense} from '../features/budget/budgetSlice';
+import {firebaseAuth} from '../services/firebaseConfig';
+import budgetService from '../features/budgetService';
 import {heightPercentageToDP} from '../utils/helpers';
 import {colors} from '../utils/theme';
 
@@ -55,12 +54,14 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
         ref={inputRef}
         style={styles.input}
         onPress={toggleDropdown}>
-        <Text>{selectedValue || 'Select'}</Text>
+        <Text style={{color: selectedValue ? '#000' : '#9CA3AF'}}>
+          {selectedValue || 'Select'}
+        </Text>
       </TouchableOpacity>
 
       {visible && (
-        <View style={[styles.dropdown, {maxHeight: 200}]}>
-          <ScrollView>
+        <View style={[styles.dropdown, {top: dropdownTop}]}>
+          <ScrollView nestedScrollEnabled>
             {options.map(item => (
               <TouchableOpacity
                 key={item}
@@ -76,7 +77,7 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
   );
 };
 
-const AddExpenseScreen = ({ navigation }) => {
+const AddExpenseScreen = ({navigation}) => {
   const [title, setTitle] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [category, setCategory] = useState('');
@@ -85,36 +86,69 @@ const AddExpenseScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleAddExpense = async () => {
-    if (!title || !amount || !category || !paidBy) {
-      Alert.alert('Please fill all required fields');
+    // Validate required fields
+    if (!title.trim()) {
+      Alert.alert('Validation Error', 'Please enter expense title');
+      return;
+    }
+    if (!amount.trim()) {
+      Alert.alert('Validation Error', 'Please enter expense amount');
+      return;
+    }
+    if (!category) {
+      Alert.alert('Validation Error', 'Please select a category');
+      return;
+    }
+    if (!paidBy) {
+      Alert.alert('Validation Error', 'Please select who paid');
       return;
     }
 
+    // Check if user is logged in
     const user = firebaseAuth.currentUser;
     if (!user) {
       Alert.alert('Error', 'User not logged in');
+      navigation.replace('Login');
+      return;
+    }
+
+    // Validate amount is a valid number
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid amount');
       return;
     }
 
     const expenseData = {
-      title,
+      title: title.trim(),
       date: new Date().toISOString(),
       paidBy,
       category,
-      description,
-      amount: parseFloat(amount),
-      userId: user.uid,
-      createdAt: new Date().toISOString(),
+      description: description.trim(),
+      amount: parsedAmount,
     };
 
     setLoading(true);
     try {
       await budgetService.addExpense(expenseData);
-      Alert.alert('Success', 'Expense added successfully!');
-      setTimeout(() => navigation.goBack(), 1000);
+      Alert.alert('Success', 'Expense added successfully!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Clear form
+            setTitle('');
+            setPaidBy('');
+            setCategory('');
+            setDescription('');
+            setAmount('');
+            // Navigate back to dashboard
+            navigation.goBack();
+          },
+        },
+      ]);
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Failed to add expense');
+      console.error('Error adding expense:', err);
+      Alert.alert('Error', 'Failed to add expense. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -122,16 +156,16 @@ const AddExpenseScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{flex: 1}}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        style={{flex: 1}}
+        contentContainerStyle={{paddingBottom: 32}}
         keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
           <Text style={styles.heading}>Add Expense</Text>
 
-          <Text style={styles.label}>Expense Title</Text>
+          <Text style={styles.label}>Expense Title *</Text>
           <TextInput
             style={styles.input}
             placeholder="Grocery Shopping"
@@ -141,13 +175,14 @@ const AddExpenseScreen = ({ navigation }) => {
           />
 
           <Dropdown
-            label="Paid By"
+            label="Paid By *"
             options={optionsPaidBy}
             selectedValue={paidBy}
             onValueChange={setPaidBy}
           />
+
           <Dropdown
-            label="Category"
+            label="Category *"
             options={optionsCategory}
             selectedValue={category}
             onValueChange={setCategory}
@@ -163,7 +198,7 @@ const AddExpenseScreen = ({ navigation }) => {
             multiline
           />
 
-          <Text style={styles.label}>Expense Amount</Text>
+          <Text style={styles.label}>Expense Amount *</Text>
           <TextInput
             style={styles.input}
             placeholder="₹2,350"
@@ -174,19 +209,25 @@ const AddExpenseScreen = ({ navigation }) => {
           />
 
           <TouchableOpacity
-            style={[styles.button, { opacity: loading ? 0.7 : 1 }]}
+            style={[styles.button, {opacity: loading ? 0.7 : 1}]}
             onPress={handleAddExpense}
             disabled={loading}>
             <Text style={styles.buttonText}>
               {loading ? 'Adding...' : 'Add Expense'}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            disabled={loading}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
 
 export default AddExpenseScreen;
 
@@ -198,6 +239,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#1F2937',
     marginBottom: 24,
+    marginTop: 16,
   },
   label: {
     fontSize: 16,
@@ -213,14 +255,14 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#F9FAFB',
+    color: '#000',
   },
   textArea: {height: 100, textAlignVertical: 'top'},
   button: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
-    marginBottom: 32,
-    marginTop: heightPercentageToDP('2%'),
+    marginTop: heightPercentageToDP('3%'),
   },
   buttonText: {
     color: '#FFFFFF',
@@ -228,28 +270,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  label: {
-    fontSize: 16,
-    color: '#374151',
-    marginBottom: heightPercentageToDP('1%'),
-    fontWeight: '600',
-  },
-  input: {
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: heightPercentageToDP('2%'),
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   dropdown: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#D1D5DB',
+    maxHeight: 200,
     zIndex: 999,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
@@ -260,9 +303,10 @@ const styles = StyleSheet.create({
   optionItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#E5E7EB',
   },
   optionText: {
     fontSize: 16,
+    color: '#1F2937',
   },
 });

@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import {LineChart, PieChart} from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {firebaseDatabase} from '../../firebase.config';
+import {ref, onValue, off} from 'firebase/database';
+import {firebaseAuth, firebaseDatabase} from '../services/firebaseConfig';
+import {logoutUser} from '../features/authService';
 import {heightPercentageToDP, widthPercentageToDP} from '../utils/helpers';
 import {baseStyle, colors, sizes} from '../utils/theme';
 
@@ -20,34 +22,62 @@ export default function DashboardScreen() {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
-  // Fetch expenses directly from Firebase Realtime DB
+  // Fetch expenses for the currently logged-in user from Firebase Realtime DB
   useEffect(() => {
-    const ref = firebaseDatabase.ref('/expenses');
-    const listener = ref.on('value', snapshot => {
+    const user = firebaseAuth.currentUser;
+    
+    if (!user) {
+      console.log('No user logged in');
+      navigation.replace('Login');
+      return;
+    }
+
+    // Reference to the user's expenses using modular Firebase syntax
+    const expensesRef = ref(firebaseDatabase, `expenses/${user.uid}`);
+    
+    const unsubscribe = onValue(expensesRef, (snapshot) => {
       const data = snapshot.val() || {};
       const list = Object.keys(data).map(key => ({
         id: key,
         ...data[key],
-        amount: parseFloat(data[key].amount),
+        amount: parseFloat(data[key].amount) || 0,
       }));
+      
       setTransactions(list);
 
+      // Calculate income (you can adjust the category logic)
       const income = list
-        .filter(item => item.category === 'Salary')
+        .filter(item => item.category === 'Salary' || item.category === 'Income')
         .reduce((sum, item) => sum + item.amount, 0);
 
+      // Calculate expenses (everything except income)
       const expense = list
-        .filter(item => item.category !== 'Salary')
+        .filter(item => item.category !== 'Salary' && item.category !== 'Income')
         .reduce((sum, item) => sum + item.amount, 0);
 
       setTotalIncome(income);
       setTotalExpense(expense);
+      setLoading(false);
     });
 
-    return () => ref.off('value', listener);
-  }, []);
+    // Cleanup listener on unmount
+    return () => {
+      off(expensesRef);
+    };
+  }, [navigation]);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setMenuVisible(false);
+      navigation.reset({index: 0, routes: [{name: 'Login'}]});
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const savings = totalIncome - totalExpense;
   const savingsRate =
@@ -55,31 +85,30 @@ export default function DashboardScreen() {
 
   // Compute totals per category
   const categoryTotals = transactions.reduce((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + item.amount;
+    if (item.category !== 'Salary' && item.category !== 'Income') {
+      acc[item.category] = (acc[item.category] || 0) + item.amount;
+    }
     return acc;
   }, {});
 
   const categoryColors = {
-    Salary: '#10b981',
-    Food: '#f59e0b',
-    Transport: '#3b82f6',
+    'Food & Groceries': '#f59e0b',
+    'Bills & Utilities': '#3b82f6',
+    Education: '#8b5cf6',
+    Healthcare: '#06b6d4',
+    Transport: '#84cc16',
     Shopping: '#ec4899',
-    Bills: '#8b5cf6',
     Entertainment: '#ef4444',
-    Health: '#06b6d4',
-    Education: '#84cc16',
     Other: '#64748b',
   };
 
-  const pieData = Object.keys(categoryTotals)
-    .filter(key => key !== 'Salary')
-    .map((key, index) => ({
-      name: key,
-      amount: categoryTotals[key],
-      color: categoryColors[key] || `hsl(${(index * 45) % 360}, 65%, 55%)`,
-      legendFontColor: '#374151',
-      legendFontSize: 11,
-    }));
+  const pieData = Object.keys(categoryTotals).map((key, index) => ({
+    name: key,
+    amount: categoryTotals[key],
+    color: categoryColors[key] || `hsl(${(index * 45) % 360}, 65%, 55%)`,
+    legendFontColor: '#374151',
+    legendFontSize: 11,
+  }));
 
   const formatCurrency = amount =>
     new Intl.NumberFormat('en-IN', {
@@ -100,6 +129,14 @@ export default function DashboardScreen() {
     return 'Needs Attention';
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       {/* 3-Dots Menu */}
@@ -115,10 +152,7 @@ export default function DashboardScreen() {
             <View style={styles.menuDivider} />
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.reset({index: 0, routes: [{name: 'Login'}]});
-              }}>
+              onPress={handleLogout}>
               <Text style={[styles.menuText, {color: 'red'}]}>Logout</Text>
             </TouchableOpacity>
           </View>
