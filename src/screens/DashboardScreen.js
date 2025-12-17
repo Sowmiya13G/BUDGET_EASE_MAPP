@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {LineChart, PieChart} from 'react-native-chart-kit';
+import {LineChart, PieChart,BarChart} from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {ref, onValue, off} from 'firebase/database';
 import {firebaseAuth, firebaseDatabase} from '../services/firebaseConfig';
@@ -19,55 +19,53 @@ import {baseStyle, colors, sizes} from '../utils/theme';
 
 export default function DashboardScreen() {
   const [transactions, setTransactions] = useState([]);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpense, setTotalExpense] = useState(0);
+  // const [totalIncome, setTotalIncome] = useState(0);
+  // const [totalExpense, setTotalExpense] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
+  const [incomeList, setIncomeList] = useState([]);
+const [expenseList, setExpenseList] = useState([]);
+
+
   // Fetch expenses for the currently logged-in user from Firebase Realtime DB
-  useEffect(() => {
-    const user = firebaseAuth.currentUser;
-    
-    if (!user) {
-      console.log('No user logged in');
-      navigation.replace('Login');
-      return;
-    }
+useEffect(() => {
+  const user = firebaseAuth.currentUser;
+  if (!user) return;
 
-    // Reference to the user's expenses using modular Firebase syntax
-    const expensesRef = ref(firebaseDatabase, `expenses/${user.uid}`);
-    
-    const unsubscribe = onValue(expensesRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      const list = Object.keys(data).map(key => ({
-        id: key,
-        ...data[key],
-        amount: parseFloat(data[key].amount) || 0,
-      }));
-      
-      setTransactions(list);
+  const incomeRef = ref(firebaseDatabase, `incomeData/${user.uid}`);
+  const expenseRef = ref(firebaseDatabase, `expenses/${user.uid}`);
 
-      // Calculate income (you can adjust the category logic)
-      const income = list
-        .filter(item => item.category === 'Salary' || item.category === 'Income')
-        .reduce((sum, item) => sum + item.amount, 0);
+  const handleIncome = snapshot => {
+    const data = snapshot.val() || {};
+    const list = Object.keys(data).map(key => ({
+      id: key,
+      ...data[key],
+      amount: Number(data[key].amount) || 0,
+    }));
+    setIncomeList(list);
+  };
 
-      // Calculate expenses (everything except income)
-      const expense = list
-        .filter(item => item.category !== 'Salary' && item.category !== 'Income')
-        .reduce((sum, item) => sum + item.amount, 0);
+  const handleExpense = snapshot => {
+    const data = snapshot.val() || {};
+    const list = Object.keys(data).map(key => ({
+      id: key,
+      ...data[key],
+      amount: Number(data[key].amount) || 0,
+    }));
+    setExpenseList(list);
+  };
 
-      setTotalIncome(income);
-      setTotalExpense(expense);
-      setLoading(false);
-    });
+  onValue(incomeRef, handleIncome);
+  onValue(expenseRef, handleExpense);
 
-    // Cleanup listener on unmount
-    return () => {
-      off(expensesRef);
-    };
-  }, [navigation]);
+  return () => {
+    off(incomeRef);
+    off(expenseRef);
+  };
+}, []);
+
 
   const handleLogout = async () => {
     try {
@@ -79,36 +77,87 @@ export default function DashboardScreen() {
     }
   };
 
-  const savings = totalIncome - totalExpense;
+const totalIncome = incomeList.reduce((sum, i) => sum + i.amount, 0);
+const totalExpense = expenseList.reduce((sum, e) => sum + e.amount, 0);
+const savings = totalIncome - totalExpense;
+
+
+  // const savings = totalIncome - totalExpense;
   const savingsRate =
     totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : 0;
 
+//for BAR CHAT
+const barData = {
+  labels: ['Income', 'Expenses', 'Savings'],
+  datasets: [
+    {
+      data: [
+        totalIncome || 0,
+        totalExpense || 0,
+        savings > 0 ? savings : 0,
+      ],
+      colors: [
+        () => '#22C55E', // Green - Income
+        () => '#EF4444', // Red - Expenses
+        () => '#3B82F6', // Blue - Savings
+      ],
+    },
+  ],
+};
+
+
+const expenseCategoryTotals = expenseList.reduce((acc, item) => {
+  acc[item.category] = (acc[item.category] || 0) + item.amount;
+  return acc;
+}, {});
+
   // Compute totals per category
-  const categoryTotals = transactions.reduce((acc, item) => {
-    if (item.category !== 'Salary' && item.category !== 'Income') {
-      acc[item.category] = (acc[item.category] || 0) + item.amount;
-    }
-    return acc;
-  }, {});
+  // const categoryTotals = transactions.reduce((acc, item) => {
+  //   if (item.category !== 'Salary' && item.category !== 'Income') {
+  //     acc[item.category] = (acc[item.category] || 0) + item.amount;
+  //   }
+  //   return acc;
+  // }, {});
 
   const categoryColors = {
-    'Food & Groceries': '#f59e0b',
-    'Bills & Utilities': '#3b82f6',
-    Education: '#8b5cf6',
-    Healthcare: '#06b6d4',
-    Transport: '#84cc16',
-    Shopping: '#ec4899',
-    Entertainment: '#ef4444',
-    Other: '#64748b',
+    'House Rent': '#f59e0b',
+    'Utilities – Electricity': '#3b82f6',
+    "Water": '#8b5cf6',
+    "Health Insurance premium": '#06b6d4',
+    "Medical Expenses": '#84cc16',
+    "Transportation – Monthly Travel Pass": '#ec4899',
+  "Fuel Cost": '#ef4444',
+    "School/College Fees": '#64748b',
   };
 
-  const pieData = Object.keys(categoryTotals).map((key, index) => ({
-    name: key,
-    amount: categoryTotals[key],
-    color: categoryColors[key] || `hsl(${(index * 45) % 360}, 65%, 55%)`,
+  const optionsCategory = [
+"House Rent",
+"Utilities – Electricity", 
+"Water",
+"Health Insurance premium",
+"Medical Expenses",
+"Transportation – Monthly Travel Pass", 
+"Fuel Cost",
+"School/College Fees"
+];
+
+  const pieData = optionsCategory
+  .filter(cat => expenseCategoryTotals[cat])
+  .map(cat => ({
+    name: cat,
+    amount: expenseCategoryTotals[cat],
+    color: categoryColors[cat],
     legendFontColor: '#374151',
-    legendFontSize: 11,
+    legendFontSize: 12,
   }));
+
+  // const pieData = Object.keys(categoryTotals).map((key, index) => ({
+  //   name: key,
+  //   amount: categoryTotals[key],
+  //   color: categoryColors[key] || `hsl(${(index * 45) % 360}, 65%, 55%)`,
+  //   legendFontColor: '#374151',
+  //   legendFontSize: 11,
+  // }));
 
   const formatCurrency = amount =>
     new Intl.NumberFormat('en-IN', {
@@ -186,6 +235,18 @@ export default function DashboardScreen() {
       {/* Content */}
       <View style={styles.contentContainer}>
         {/* Add Expense Button */}
+           <View style={{flexDirection:"row"}}>
+         <TouchableOpacity
+                  style={styles.expenseButton}
+                  onPress={() => navigation.navigate('AddIncomeScreen')}>
+                  <Text
+                    style={[
+                      baseStyle.txtStyleOutPoppinSemiBold(sizes.size2, colors.black),
+                      {textAlign: 'center'},
+                    ]}>
+                    Add Income 
+                  </Text>
+                </TouchableOpacity>
         <TouchableOpacity
           style={styles.expenseButton}
           onPress={() => navigation.navigate('AddExpenseForm')}>
@@ -197,7 +258,7 @@ export default function DashboardScreen() {
             Add Expense
           </Text>
         </TouchableOpacity>
-
+</View>
         {/* Summary Cards */}
         <ScrollView
           horizontal
@@ -227,7 +288,7 @@ export default function DashboardScreen() {
         </ScrollView>
 
         {/* Pie Chart */}
-        <View style={styles.chartSection}>
+       <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Expense Breakdown</Text>
             <Text style={styles.chartSubtitle}>By category</Text>
@@ -243,6 +304,7 @@ export default function DashboardScreen() {
               absolute
               chartConfig={{color: opacity => `rgba(0, 0, 0, ${opacity})`}}
             />
+            
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateIcon}>📊</Text>
@@ -252,8 +314,41 @@ export default function DashboardScreen() {
               </Text>
             </View>
           )}
-        </View>
+        </View> 
 
+
+{/*Bar CHAT*/}
+ <View style={styles.chartSection}>
+ <Text style={[styles.chartTitle,{bottom:10}]}>Income Vs. Expenses </Text>
+
+<BarChart
+  data={barData}
+  width={Dimensions.get('window').width - 60}
+  height={200}
+  fromZero
+  showValuesOnTopOfBars
+  withCustomBarColorFromData={true}   // 🔥 REQUIRED
+  flatColor={true}                   // 🔥 Prevent gradient
+  yAxisLabel="₹ "
+  chartConfig={{
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    decimalPlaces: 0,
+    // barPercentage: 0.55,
+    color: opacity => `rgba(0,0,0,${opacity})`, // fallback only
+    labelColor: () => '#6B7280',
+    propsForBackgroundLines: {
+      stroke: '#E5E7EB',
+    },
+  }}
+  style={{
+    borderRadius: 16,
+  }}
+/>
+
+
+
+ </View>
         {/* Line Chart */}
         <View style={styles.chartSection}>
           <Text style={styles.chartTitle}>Financial Overview</Text>
@@ -437,10 +532,11 @@ const styles = StyleSheet.create({
   expenseButton: {
     padding: widthPercentageToDP('4%'),
     backgroundColor: colors.white,
-    width: widthPercentageToDP('90%'),
+    width: widthPercentageToDP('45%'),
     borderRadius: widthPercentageToDP('4%'),
     marginBottom: heightPercentageToDP('5%'),
     borderColor: colors.primary,
     borderWidth: widthPercentageToDP('1%'),
   },
 });
+

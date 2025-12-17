@@ -17,36 +17,20 @@ import {colors} from '../utils/theme';
 
 const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
 const optionsCategory = [
-"House Rent",
-"Utilities – Electricity", 
-"Water",
-"Health Insurance premium",
-"Medical Expenses",
-"Transportation – Monthly Travel Pass", 
-"Fuel Cost",
-"School/College Fees"
+  'Monthly Salary',
+  'Part-time wages',
+  'Bank Interest',
+  'Dividends',
+  'Rental Income',
+  'Annuity Income',
 ];
 
 const Dropdown = ({label, options, selectedValue, onValueChange}) => {
   const [visible, setVisible] = useState(false);
-  const [dropdownTop, setDropdownTop] = useState(0);
-  const inputRef = useRef(null);
 
   const handleSelect = value => {
     onValueChange(value);
     setVisible(false);
-  };
-
-  const toggleDropdown = () => {
-    if (visible) {
-      setVisible(false);
-      return;
-    }
-
-    inputRef.current?.measure((_fx, _fy, _w, h, _px, py) => {
-      setDropdownTop(py + h);
-      setVisible(true);
-    });
   };
 
   return (
@@ -54,9 +38,8 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
       <Text style={styles.label}>{label}</Text>
 
       <TouchableOpacity
-        ref={inputRef}
         style={styles.input}
-        onPress={toggleDropdown}>
+        onPress={() => setVisible(!visible)}>
         <Text style={{color: selectedValue ? '#000' : '#9CA3AF', flex: 1}}>
           {selectedValue || 'Select'}
         </Text>
@@ -65,16 +48,16 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
 
       {visible && (
         <>
-          <TouchableOpacity 
-            style={styles.overlay} 
+          <TouchableOpacity
+            style={styles.overlay}
             onPress={() => setVisible(false)}
             activeOpacity={1}
           />
           <View style={styles.dropdown}>
             <ScrollView nestedScrollEnabled>
-              {options.map(item => (
+              {options.map((item, index) => (
                 <TouchableOpacity
-                  key={item}
+                  key={index}
                   style={styles.optionItem}
                   onPress={() => handleSelect(item)}>
                   <Text style={styles.optionText}>{item}</Text>
@@ -88,30 +71,31 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
   );
 };
 
-const AddExpenseScreen = ({navigation}) => {
-  const [title, setTitle] = useState('');
-  const [paidBy, setPaidBy] = useState('');
-  const [category, setCategory] = useState('');
+const AddIncomeScreen = ({navigation}) => {
+  const [familyMember, setFamilyMember] = useState('');
+  const [relationToFamily, setRelationToFamily] = useState('');
+  const [incomeSourceType, setIncomeSourceType] = useState('');
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
+  const [incomeAmount, setIncomeAmount] = useState('');
+  const [frequencyIncome, setFrequencyIncome] = useState('');
+  const [dateRecevied, setDateRecevied] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [categoryType, setCategoryType] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleAddExpense = async () => {
     // Validate required fields
-    if (!title.trim()) {
-      Alert.alert('Validation Error', 'Please enter expense title');
+    if (!familyMember.trim()) {
+      Alert.alert('Validation Error', 'Please enter family member Name');
       return;
     }
-    if (!amount.trim()) {
-      Alert.alert('Validation Error', 'Please enter expense amount');
-      return;
-    }
-    if (!category) {
-      Alert.alert('Validation Error', 'Please select a category');
-      return;
-    }
-    if (!paidBy) {
-      Alert.alert('Validation Error', 'Please select who paid');
+    
+    if (
+      relationToFamily === undefined ||
+      relationToFamily === null ||
+      relationToFamily === ''
+    ) {
+      Alert.alert('Validation Error', 'Please Select the relation');
       return;
     }
 
@@ -123,46 +107,50 @@ const AddExpenseScreen = ({navigation}) => {
       return;
     }
 
-    // Validate amount is a valid number
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid amount');
-      return;
-    }
-    
     const month = new Date().toISOString().slice(0, 7);
-    const expenseData = {
-      title: title.trim(),
+
+    const incomeData = {
+      familyMember: familyMember.trim(),
       date: new Date().toISOString(),
-      paidBy,
-      category,
+      relationToFamily,
+      incomeSourceType,
       description: description.trim(),
-      amount: parsedAmount,
-      month: month,  
-      type: "Expense"
+      amount: incomeAmount,
+      frequencyIncome,
+      dateRecevied: dateRecevied.trim(),
+      paymentMethod,
+      categoryType: categoryType,
+      month: month,
+      type: 'Income',
     };
+
+    console.log('incomeData...!', incomeData);
 
     setLoading(true);
     try {
-      await budgetService.addExpense(expenseData);
-      Alert.alert('Success', 'Expense added successfully!', [
+      await budgetService.addIncome(incomeData);
+      Alert.alert('Success', 'Income added successfully!', [
         {
           text: 'OK',
           onPress: () => {
             // Clear form
-            setTitle('');
-            setPaidBy('');
-            setCategory('');
+            setFamilyMember('');
+            setRelationToFamily('');
+            setIncomeSourceType('');
             setDescription('');
-            setAmount('');
+            setIncomeAmount('');
+            setFrequencyIncome('');
+            setDateRecevied('');
+            setPaymentMethod('');
+            setCategoryType('');
             // Navigate back to dashboard
             navigation.goBack();
           },
         },
       ]);
     } catch (err) {
-      console.error('Error adding expense:', err);
-      Alert.alert('Error', 'Failed to add expense. Please try again.');
+      console.error('Error adding income:', err);
+      Alert.alert('Error', 'Failed to add income. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -177,49 +165,81 @@ const AddExpenseScreen = ({navigation}) => {
         contentContainerStyle={{paddingBottom: 32}}
         keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
-          <Text style={styles.heading}>Add Expense</Text>
+          <Text style={styles.heading}>Add Income</Text>
 
-          <Text style={styles.label}>Expense Title *</Text>
+          <Text style={styles.label}>Family Member Name</Text>
           <TextInput
             style={styles.input}
-            placeholder="Grocery Shopping"
+            placeholder="Family Member Name"
             placeholderTextColor="#9CA3AF"
-            value={title}
-            onChangeText={setTitle}
+            value={familyMember}
+            onChangeText={text => setFamilyMember(text)}
           />
 
           <Dropdown
-            label="Paid By *"
+            label="Relation to Family Head"
             options={optionsPaidBy}
-            selectedValue={paidBy}
-            onValueChange={setPaidBy}
+            selectedValue={relationToFamily}
+            onValueChange={text => setRelationToFamily(text)}
           />
 
           <Dropdown
-            label="Category *"
+            label="Income Source Type"
             options={optionsCategory}
-            selectedValue={category}
-            onValueChange={setCategory}
+            selectedValue={incomeSourceType}
+            onValueChange={text => setIncomeSourceType(text)}
           />
 
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>Income Description</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Details..."
             placeholderTextColor="#9CA3AF"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={text => setDescription(text)}
             multiline
           />
 
-          <Text style={styles.label}>Expense Amount *</Text>
+          <Dropdown
+            label="Frequency of Income"
+            options={['Daily', 'Weekly', 'Monthly', 'Yearly']}
+            selectedValue={frequencyIncome}
+            onValueChange={n => setFrequencyIncome(n)}
+          />
+
+          <Dropdown
+            label="Payment Method"
+            options={['Cash', 'Bank Transfer', 'UPI', 'Cheque']}
+            selectedValue={paymentMethod}
+            onValueChange={n => setPaymentMethod(n)}
+          />
+
+          <Text style={styles.label}>Income Amount</Text>
           <TextInput
             style={styles.input}
             placeholder="₹2,350"
             placeholderTextColor="#9CA3AF"
             keyboardType="numeric"
-            value={amount}
-            onChangeText={setAmount}
+            value={incomeAmount}
+            onChangeText={n => setIncomeAmount(n)}
+          />
+
+          <Text style={styles.label}>Income Date Received</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Income Date Received"
+            placeholderTextColor="#9CA3AF"
+            value={dateRecevied}
+            onChangeText={text => setDateRecevied(text)}
+          />
+
+          <Text style={styles.label}>Income Category</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Income Category type"
+            placeholderTextColor="#9CA3AF"
+            value={categoryType}
+            onChangeText={n => setCategoryType(n)}
           />
 
           <TouchableOpacity
@@ -227,7 +247,7 @@ const AddExpenseScreen = ({navigation}) => {
             onPress={handleAddExpense}
             disabled={loading}>
             <Text style={styles.buttonText}>
-              {loading ? 'Adding...' : 'Add Expense'}
+              {loading ? 'Adding...' : 'Add Income'}
             </Text>
           </TouchableOpacity>
 
@@ -243,7 +263,7 @@ const AddExpenseScreen = ({navigation}) => {
   );
 };
 
-export default AddExpenseScreen;
+export default AddIncomeScreen;
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#F3F4F6', padding: 16},

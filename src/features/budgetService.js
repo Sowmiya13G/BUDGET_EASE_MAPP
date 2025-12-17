@@ -1,5 +1,6 @@
 import { firebaseDatabase } from '../services/firebaseConfig';
 import { firebaseAuth } from '../services/firebaseConfig';
+import { ref, push, set } from "firebase/database";
 
 const budgetService = {
   /**
@@ -11,21 +12,24 @@ const budgetService = {
       if (!user) {
         throw new Error('User not authenticated');
       }
-
+ const month = new Date().toISOString().slice(0, 7);
       const expenseWithUser = {
         ...expense,
+        month,
         userId: user.uid,
-        createdAt: new Date().toISOString(),
+        createdAt: Date.now(),
       };
 
-      const newRef = firebaseDatabase.ref(`expenses/${user.uid}`).push();
-      await newRef.set(expenseWithUser);
-      
-      return { id: newRef.key, ...expenseWithUser };
-    } catch (error) {
-      console.error('Error adding expense:', error);
-      throw error;
-    }
+ console.log("expenseWithUser....!", expenseWithUser);
+    // Create reference correctly in Firebase v9
+    const newRef = push(ref(firebaseDatabase, `expenses/${user.uid}`));
+    // Save data
+    await set(newRef, expenseWithUser);
+    return { id: newRef.key, ...expenseWithUser };
+  } catch (error) {
+    console.error("Error adding expense:", error);
+    throw error;
+  }
   },
 
   /**
@@ -117,6 +121,51 @@ const budgetService = {
     // Return unsubscribe function
     return () => ref.off('value', listener);
   },
+
+
+addIncome: async (income) => {
+  try {
+    const user = firebaseAuth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+     const month = new Date().toISOString().slice(0, 7);
+    const incomeWithUser = {
+      ...income,
+      month,
+      userId: user.uid,
+      createdAt: Date.now(),
+    };
+    console.log("incomeWithUser....!", incomeWithUser);
+    // Create reference correctly in Firebase v9
+    const newRef = push(ref(firebaseDatabase, `incomeData/${user.uid}`));
+    // Save data
+    await set(newRef, incomeWithUser);
+    return { id: newRef.key, ...incomeWithUser };
+  } catch (error) {
+    console.error("Error adding income:", error);
+    throw error;
+  }
+},
+getIncomeData: async () => {
+    try {
+      const user = firebaseAuth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const snapshot = await firebaseDatabase
+        .ref(`incomeData/${user.uid}`)
+        .once('value');
+      
+      const data = snapshot.val() || {};
+      return Object.keys(data).map(key => ({ id: key, ...data[key] }));
+    } catch (error) {
+      console.error('Error getting expenses:', error);
+      throw error;
+    }
+  },
+
 };
 
 export default budgetService;

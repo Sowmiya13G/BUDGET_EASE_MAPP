@@ -35,6 +35,8 @@ const ResetPasswordScreen = () => {
   });
 
   const onResetPassword = async data => {
+      console.log("onResetPassword",data);
+      Alert.alert("clk")
     setLoading(true);
     try {
       await sendPasswordResetEmail(firebaseAuth, data.email);
