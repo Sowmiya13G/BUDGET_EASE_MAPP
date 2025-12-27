@@ -1,7 +1,8 @@
-import React, {useState, useRef} from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,21 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {firebaseAuth} from '../services/firebaseConfig';
+import CalendarPicker from 'react-native-calendar-picker';
 import budgetService from '../features/budgetService';
-import {heightPercentageToDP} from '../utils/helpers';
-import {colors} from '../utils/theme';
+import { firebaseAuth } from '../services/firebaseConfig';
+import { formatDate, heightPercentageToDP } from '../utils/helpers';
+import { colors } from '../utils/theme';
 
-const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
+const optionsPaidBy = ['Self', 'Father', 'Mother', 'Son', 'Daughter'];
 const optionsCategory = [
-"House Rent",
-"Utilities – Electricity", 
-"Water",
-"Health Insurance premium",
-"Medical Expenses",
-"Transportation – Monthly Travel Pass", 
-"Fuel Cost",
-"School/College Fees"
+  'House Rent',
+  'Utilities – Electricity',
+  'Water',
+  'Health Insurance premium',
+  'Medical Expenses',
+  'Transportation – Monthly Travel Pass',
+  'Fuel Cost',
+  'School/College Fees',
 ];
 
 const Dropdown = ({label, options, selectedValue, onValueChange}) => {
@@ -50,39 +52,31 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
   };
 
   return (
-    <View style={{marginBottom: heightPercentageToDP('2%'), zIndex: visible ? 1000 : 1}}>
+    <View style={{marginBottom: heightPercentageToDP('2%')}}>
       <Text style={styles.label}>{label}</Text>
 
       <TouchableOpacity
         ref={inputRef}
         style={styles.input}
         onPress={toggleDropdown}>
-        <Text style={{color: selectedValue ? '#000' : '#9CA3AF', flex: 1}}>
+        <Text style={{color: selectedValue ? '#000' : '#9CA3AF'}}>
           {selectedValue || 'Select'}
         </Text>
-        <Text style={styles.dropdownArrow}>{visible ? '▲' : '▼'}</Text>
       </TouchableOpacity>
 
       {visible && (
-        <>
-          <TouchableOpacity 
-            style={styles.overlay} 
-            onPress={() => setVisible(false)}
-            activeOpacity={1}
-          />
-          <View style={styles.dropdown}>
-            <ScrollView nestedScrollEnabled>
-              {options.map(item => (
-                <TouchableOpacity
-                  key={item}
-                  style={styles.optionItem}
-                  onPress={() => handleSelect(item)}>
-                  <Text style={styles.optionText}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </>
+        <View style={[styles.dropdown, {top: dropdownTop}]}>
+          <ScrollView nestedScrollEnabled>
+            {options.map(item => (
+              <TouchableOpacity
+                key={item}
+                style={styles.optionItem}
+                onPress={() => handleSelect(item)}>
+                <Text style={styles.optionText}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -95,7 +89,8 @@ const AddExpenseScreen = ({navigation}) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [calendarVisible, setCalendarVisible] = useState(false);
   const handleAddExpense = async () => {
     // Validate required fields
     if (!title.trim()) {
@@ -114,6 +109,10 @@ const AddExpenseScreen = ({navigation}) => {
       Alert.alert('Validation Error', 'Please select who paid');
       return;
     }
+    if (!selectedDate) {
+      Alert.alert('Validation Error', 'Please select expense date');
+      return;
+    }
 
     // Check if user is logged in
     const user = firebaseAuth.currentUser;
@@ -129,17 +128,18 @@ const AddExpenseScreen = ({navigation}) => {
       Alert.alert('Validation Error', 'Please enter a valid amount');
       return;
     }
-    
-    const month = new Date().toISOString().slice(0, 7);
+    const formattedDateISO = new Date(selectedDate).toISOString();
+    const month = formattedDateISO.slice(0, 7);
+
     const expenseData = {
       title: title.trim(),
-      date: new Date().toISOString(),
+      date: formattedDateISO,
       paidBy,
       category,
       description: description.trim(),
       amount: parsedAmount,
-      month: month,  
-      type: "Expense"
+      month,
+      type: 'Expense',
     };
 
     setLoading(true);
@@ -168,6 +168,10 @@ const AddExpenseScreen = ({navigation}) => {
     }
   };
 
+  const onDateChange = date => {
+    setSelectedDate(date);
+    setCalendarVisible(false);
+  };
   return (
     <KeyboardAvoidingView
       style={{flex: 1}}
@@ -221,6 +225,15 @@ const AddExpenseScreen = ({navigation}) => {
             value={amount}
             onChangeText={setAmount}
           />
+          <Text style={styles.label}>Expense Date *</Text>
+
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setCalendarVisible(true)}>
+            <Text style={{color: '#000'}}>
+              {selectedDate ? formatDate(selectedDate) : 'Select Date'}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, {opacity: loading ? 0.7 : 1}]}
@@ -238,6 +251,29 @@ const AddExpenseScreen = ({navigation}) => {
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
+        <Modal
+          transparent
+          animationType="fade"
+          visible={calendarVisible}
+          onRequestClose={() => setCalendarVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Date</Text>
+
+              <CalendarPicker
+                onDateChange={onDateChange}
+                selectedStartDate={selectedDate}
+                maxDate={new Date()}
+              />
+
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setCalendarVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -270,8 +306,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#F9FAFB',
     color: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   textArea: {height: 100, textAlignVertical: 'top'},
   button: {
@@ -302,32 +336,19 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: '100%',
     left: 0,
     right: 0,
-    marginTop: 4,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     maxHeight: 200,
+    zIndex: 999,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dropdownArrow: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
   },
   optionItem: {
     padding: 16,
@@ -337,5 +358,36 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#1F2937',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+
+  modalCancel: {
+    marginTop: 12,
+    paddingVertical: 12,
+  },
+
+  modalCancelText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });

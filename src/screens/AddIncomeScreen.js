@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState} from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -10,9 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {firebaseAuth} from '../services/firebaseConfig';
 import budgetService from '../features/budgetService';
-import {heightPercentageToDP} from '../utils/helpers';
+import {firebaseAuth} from '../services/firebaseConfig';
+import {formatDate, heightPercentageToDP} from '../utils/helpers';
 import {colors} from '../utils/theme';
 
 const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
@@ -34,38 +34,30 @@ const Dropdown = ({label, options, selectedValue, onValueChange}) => {
   };
 
   return (
-    <View style={{marginBottom: heightPercentageToDP('2%'), zIndex: visible ? 1000 : 1}}>
+    <View style={{marginBottom: heightPercentageToDP('2%')}}>
       <Text style={styles.label}>{label}</Text>
 
       <TouchableOpacity
         style={styles.input}
         onPress={() => setVisible(!visible)}>
-        <Text style={{color: selectedValue ? '#000' : '#9CA3AF', flex: 1}}>
+        <Text style={{color: selectedValue ? '#000' : '#9CA3AF'}}>
           {selectedValue || 'Select'}
         </Text>
-        <Text style={styles.dropdownArrow}>{visible ? '▲' : '▼'}</Text>
       </TouchableOpacity>
 
       {visible && (
-        <>
-          <TouchableOpacity
-            style={styles.overlay}
-            onPress={() => setVisible(false)}
-            activeOpacity={1}
-          />
-          <View style={styles.dropdown}>
-            <ScrollView nestedScrollEnabled>
-              {options.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.optionItem}
-                  onPress={() => handleSelect(item)}>
-                  <Text style={styles.optionText}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </>
+        <View style={styles.dropdown}>
+          <ScrollView nestedScrollEnabled>
+            {options.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.optionItem}
+                onPress={() => handleSelect(item)}>
+                <Text style={styles.optionText}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -78,18 +70,22 @@ const AddIncomeScreen = ({navigation}) => {
   const [description, setDescription] = useState('');
   const [incomeAmount, setIncomeAmount] = useState('');
   const [frequencyIncome, setFrequencyIncome] = useState('');
-  const [dateRecevied, setDateRecevied] = useState('');
+  const [dateReceived, setDateReceived] = useState(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState('');
   const [categoryType, setCategoryType] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleAddExpense = async () => {
     // Validate required fields
+    console.log('1');
+
     if (!familyMember.trim()) {
       Alert.alert('Validation Error', 'Please enter family member Name');
       return;
     }
-    
+    console.log('2');
     if (
       relationToFamily === undefined ||
       relationToFamily === null ||
@@ -98,6 +94,11 @@ const AddIncomeScreen = ({navigation}) => {
       Alert.alert('Validation Error', 'Please Select the relation');
       return;
     }
+    console.log('3');
+    // if (!category) {
+    //   Alert.alert('Validation Error', 'Please select a category');
+    //   return;
+    // }
 
     // Check if user is logged in
     const user = firebaseAuth.currentUser;
@@ -106,21 +107,34 @@ const AddIncomeScreen = ({navigation}) => {
       navigation.replace('Login');
       return;
     }
+    if (!dateReceived) {
+      Alert.alert('Validation Error', 'Please select income date');
+      return;
+    }
 
-    const month = new Date().toISOString().slice(0, 7);
+    console.log('4');
+    // Validate amount is a valid number
+    // const parsedAmount = parseFloat(amount);
+    // if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    //   Alert.alert('Validation Error', 'Please enter a valid amount');
+    //   return;
+    // }
+    const incomeDateISO = new Date(dateReceived).toISOString();
+    const month = incomeDateISO.slice(0, 7);
 
+    console.log('5');
     const incomeData = {
       familyMember: familyMember.trim(),
-      date: new Date().toISOString(),
       relationToFamily,
       incomeSourceType,
+      date: incomeDateISO,
+      dateRecevied: incomeDateISO,
+      month,
       description: description.trim(),
       amount: incomeAmount,
       frequencyIncome,
-      dateRecevied: dateRecevied.trim(),
       paymentMethod,
       categoryType: categoryType,
-      month: month,
       type: 'Income',
     };
 
@@ -138,22 +152,26 @@ const AddIncomeScreen = ({navigation}) => {
             setRelationToFamily('');
             setIncomeSourceType('');
             setDescription('');
+            setDescription('');
             setIncomeAmount('');
             setFrequencyIncome('');
-            setDateRecevied('');
+            setDateReceived(null);
             setPaymentMethod('');
-            setCategoryType('');
             // Navigate back to dashboard
             navigation.goBack();
           },
         },
       ]);
     } catch (err) {
-      console.error('Error adding income:', err);
-      Alert.alert('Error', 'Failed to add income. Please try again.');
+      console.error('Error adding expense:', err);
+      Alert.alert('Error', 'Failed to add expense. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+  const onDateChange = date => {
+    setDateReceived(date);
+    setCalendarVisible(false);
   };
 
   return (
@@ -199,21 +217,18 @@ const AddIncomeScreen = ({navigation}) => {
             onChangeText={text => setDescription(text)}
             multiline
           />
-
           <Dropdown
             label="Frequency of Income"
             options={['Daily', 'Weekly', 'Monthly', 'Yearly']}
             selectedValue={frequencyIncome}
             onValueChange={n => setFrequencyIncome(n)}
           />
-
           <Dropdown
             label="Payment Method"
             options={['Cash', 'Bank Transfer', 'UPI', 'Cheque']}
             selectedValue={paymentMethod}
             onValueChange={n => setPaymentMethod(n)}
           />
-
           <Text style={styles.label}>Income Amount</Text>
           <TextInput
             style={styles.input}
@@ -224,14 +239,15 @@ const AddIncomeScreen = ({navigation}) => {
             onChangeText={n => setIncomeAmount(n)}
           />
 
-          <Text style={styles.label}>Income Date Received</Text>
-          <TextInput
+          <Text style={styles.label}>Income Date Received *</Text>
+
+          <TouchableOpacity
             style={styles.input}
-            placeholder="Income Date Received"
-            placeholderTextColor="#9CA3AF"
-            value={dateRecevied}
-            onChangeText={text => setDateRecevied(text)}
-          />
+            onPress={() => setCalendarVisible(true)}>
+            <Text style={{color: dateReceived ? '#000' : '#9CA3AF'}}>
+              {dateReceived ? formatDate(dateReceived) : 'Select Date'}
+            </Text>
+          </TouchableOpacity>
 
           <Text style={styles.label}>Income Category</Text>
           <TextInput
@@ -241,7 +257,6 @@ const AddIncomeScreen = ({navigation}) => {
             value={categoryType}
             onChangeText={n => setCategoryType(n)}
           />
-
           <TouchableOpacity
             style={[styles.button, {opacity: loading ? 0.7 : 1}]}
             onPress={handleAddExpense}
@@ -258,6 +273,29 @@ const AddIncomeScreen = ({navigation}) => {
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
+        <Modal
+          transparent
+          animationType="fade"
+          visible={calendarVisible}
+          onRequestClose={() => setCalendarVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Income Date</Text>
+
+              <CalendarPicker
+                onDateChange={onDateChange}
+                selectedStartDate={dateReceived}
+                maxDate={new Date()}
+              />
+
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setCalendarVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -290,8 +328,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#F9FAFB',
     color: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   textArea: {height: 100, textAlignVertical: 'top'},
   button: {
@@ -321,34 +357,47 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 4,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginTop: 4,
+    zIndex: 999,
     elevation: 5,
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dropdownArrow: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
-  },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.4)',
+  justifyContent: 'center',
+  padding: 16,
+},
+
+modalContent: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  marginBottom: 12,
+},
+
+modalCancel: {
+  marginTop: 12,
+  paddingVertical: 12,
+},
+
+modalCancelText: {
+  textAlign: 'center',
+  fontSize: 16,
+  color: '#EF4444',
+  fontWeight: '600',
+},
+
   optionItem: {
     padding: 16,
     borderBottomWidth: 1,
