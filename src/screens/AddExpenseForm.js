@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,72 +12,47 @@ import {
   View,
 } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
+import { Dropdown } from 'react-native-element-dropdown';
 import budgetService from '../features/budgetService';
 import { firebaseAuth } from '../services/firebaseConfig';
 import { formatDate, heightPercentageToDP } from '../utils/helpers';
 import { colors } from '../utils/theme';
 
-const optionsPaidBy = ['Self', 'Father', 'Mother', 'Son', 'Daughter'];
-const optionsCategory = [
-  'House Rent',
-  'Utilities – Electricity',
-  'Water',
-  'Health Insurance premium',
-  'Medical Expenses',
-  'Transportation – Monthly Travel Pass',
-  'Fuel Cost',
-  'School/College Fees',
+const optionsPaidBy = [
+  {label: 'Father', value: 'Father'},
+  {label: 'Mother', value: 'Mother'},
+  {label: 'Son', value: 'Son'},
+  {label: 'Daughter', value: 'Daughter'},
 ];
 
-const Dropdown = ({label, options, selectedValue, onValueChange}) => {
-  const [visible, setVisible] = useState(false);
-  const [dropdownTop, setDropdownTop] = useState(0);
-  const inputRef = useRef(null);
+const optionsCategory = [
+  {label: 'Monthly Salary', value: 'Monthly Salary'},
+  {label: 'Part-time wages', value: 'Part-time wages'},
+  {label: 'Bank Interest', value: 'Bank Interest'},
+  {label: 'Dividends', value: 'Dividends'},
+  {label: 'Rental Income', value: 'Rental Income'},
+  {label: 'Annuity Income', value: 'Annuity Income'},
+];
 
-  const handleSelect = value => {
-    onValueChange(value);
-    setVisible(false);
-  };
-
-  const toggleDropdown = () => {
-    if (visible) {
-      setVisible(false);
-      return;
-    }
-
-    inputRef.current?.measure((_fx, _fy, _w, h, _px, py) => {
-      setDropdownTop(py + h);
-      setVisible(true);
-    });
-  };
-
+export const AppDropdown = ({label, data, value, onChange, placeholder}) => {
   return (
     <View style={{marginBottom: heightPercentageToDP('2%')}}>
       <Text style={styles.label}>{label}</Text>
 
-      <TouchableOpacity
-        ref={inputRef}
-        style={styles.input}
-        onPress={toggleDropdown}>
-        <Text style={{color: selectedValue ? '#000' : '#9CA3AF'}}>
-          {selectedValue || 'Select'}
-        </Text>
-      </TouchableOpacity>
-
-      {visible && (
-        <View style={[styles.dropdown, {top: dropdownTop}]}>
-          <ScrollView nestedScrollEnabled>
-            {options.map(item => (
-              <TouchableOpacity
-                key={item}
-                style={styles.optionItem}
-                onPress={() => handleSelect(item)}>
-                <Text style={styles.optionText}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+      <Dropdown
+        style={styles.dropdown}
+        placeholderStyle={styles.placeholderStyle}
+        selectedTextStyle={styles.selectedTextStyle}
+        data={data}
+        search
+        maxHeight={300}
+        labelField="label"
+        valueField="value"
+        placeholder={placeholder || 'Select'}
+        searchPlaceholder="Search..."
+        value={value}
+        onChange={item => onChange(item.value)}
+      />
     </View>
   );
 };
@@ -92,7 +67,6 @@ const AddExpenseScreen = ({navigation}) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarVisible, setCalendarVisible] = useState(false);
   const handleAddExpense = async () => {
-    // Validate required fields
     if (!title.trim()) {
       Alert.alert('Validation Error', 'Please enter expense title');
       return;
@@ -122,7 +96,6 @@ const AddExpenseScreen = ({navigation}) => {
       return;
     }
 
-    // Validate amount is a valid number
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Validation Error', 'Please enter a valid amount');
@@ -192,14 +165,14 @@ const AddExpenseScreen = ({navigation}) => {
             onChangeText={setTitle}
           />
 
-          <Dropdown
+          <AppDropdown
             label="Paid By *"
             options={optionsPaidBy}
             selectedValue={paidBy}
             onValueChange={setPaidBy}
           />
 
-          <Dropdown
+          <AppDropdown
             label="Category *"
             options={optionsCategory}
             selectedValue={category}
@@ -291,6 +264,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 16,
   },
+  dropdown: {
+    height: 50,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 12,
+  },
+
+  placeholderStyle: {
+    fontSize: 16,
+    color: '#9CA3AF',
+  },
+
+  selectedTextStyle: {
+    fontSize: 16,
+    color: '#000',
+  },
+
   label: {
     fontSize: 16,
     color: '#374151',
@@ -334,22 +326,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  dropdown: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    maxHeight: 200,
-    zIndex: 999,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
+
   optionItem: {
     padding: 16,
     borderBottomWidth: 1,

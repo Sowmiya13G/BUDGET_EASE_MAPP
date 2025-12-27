@@ -1,67 +1,52 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import CalendarPicker from 'react-native-calendar-picker';
 import budgetService from '../features/budgetService';
-import {firebaseAuth} from '../services/firebaseConfig';
-import {formatDate, heightPercentageToDP} from '../utils/helpers';
-import {colors} from '../utils/theme';
+import { firebaseAuth } from '../services/firebaseConfig';
+import { formatDate, heightPercentageToDP } from '../utils/helpers';
+import { colors } from '../utils/theme';
+import { AppDropdown } from './AddExpenseForm';
 
-const optionsPaidBy = ['Father', 'Mother', 'Son', 'Daughter'];
-const optionsCategory = [
-  'Monthly Salary',
-  'Part-time wages',
-  'Bank Interest',
-  'Dividends',
-  'Rental Income',
-  'Annuity Income',
+const optionsPaidBy = [
+  {label: 'Father', value: 'Father'},
+  {label: 'Mother', value: 'Mother'},
+  {label: 'Son', value: 'Son'},
+  {label: 'Daughter', value: 'Daughter'},
 ];
 
-const Dropdown = ({label, options, selectedValue, onValueChange}) => {
-  const [visible, setVisible] = useState(false);
+const optionsCategory = [
+  {label: 'Monthly Salary', value: 'Monthly Salary'},
+  {label: 'Part-time wages', value: 'Part-time wages'},
+  {label: 'Bank Interest', value: 'Bank Interest'},
+  {label: 'Dividends', value: 'Dividends'},
+  {label: 'Rental Income', value: 'Rental Income'},
+  {label: 'Annuity Income', value: 'Annuity Income'},
+];
 
-  const handleSelect = value => {
-    onValueChange(value);
-    setVisible(false);
-  };
+const frequencyOptions = [
+  {label: 'Daily', value: 'Daily'},
+  {label: 'Weekly', value: 'Weekly'},
+  {label: 'Monthly', value: 'Monthly'},
+  {label: 'Yearly', value: 'Yearly'},
+];
 
-  return (
-    <View style={{marginBottom: heightPercentageToDP('2%')}}>
-      <Text style={styles.label}>{label}</Text>
-
-      <TouchableOpacity
-        style={styles.input}
-        onPress={() => setVisible(!visible)}>
-        <Text style={{color: selectedValue ? '#000' : '#9CA3AF'}}>
-          {selectedValue || 'Select'}
-        </Text>
-      </TouchableOpacity>
-
-      {visible && (
-        <View style={styles.dropdown}>
-          <ScrollView nestedScrollEnabled>
-            {options.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.optionItem}
-                onPress={() => handleSelect(item)}>
-                <Text style={styles.optionText}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-    </View>
-  );
-};
+const paymentMethods = [
+  {label: 'Cash', value: 'Cash'},
+  {label: 'Bank Transfer', value: 'Bank Transfer'},
+  {label: 'UPI', value: 'UPI'},
+  {label: 'Cheque', value: 'Cheque'},
+];
 
 const AddIncomeScreen = ({navigation}) => {
   const [familyMember, setFamilyMember] = useState('');
@@ -194,18 +179,18 @@ const AddIncomeScreen = ({navigation}) => {
             onChangeText={text => setFamilyMember(text)}
           />
 
-          <Dropdown
+          <AppDropdown
             label="Relation to Family Head"
-            options={optionsPaidBy}
-            selectedValue={relationToFamily}
-            onValueChange={text => setRelationToFamily(text)}
+            data={optionsPaidBy}
+            value={relationToFamily}
+            onChange={setRelationToFamily}
           />
 
-          <Dropdown
+          <AppDropdown
             label="Income Source Type"
-            options={optionsCategory}
-            selectedValue={incomeSourceType}
-            onValueChange={text => setIncomeSourceType(text)}
+            data={optionsCategory}
+            value={incomeSourceType}
+            onChange={setIncomeSourceType}
           />
 
           <Text style={styles.label}>Income Description</Text>
@@ -217,18 +202,20 @@ const AddIncomeScreen = ({navigation}) => {
             onChangeText={text => setDescription(text)}
             multiline
           />
-          <Dropdown
+          <AppDropdown
             label="Frequency of Income"
-            options={['Daily', 'Weekly', 'Monthly', 'Yearly']}
-            selectedValue={frequencyIncome}
-            onValueChange={n => setFrequencyIncome(n)}
+            data={frequencyOptions}
+            value={frequencyIncome}
+            onChange={setFrequencyIncome}
           />
-          <Dropdown
+
+          <AppDropdown
             label="Payment Method"
-            options={['Cash', 'Bank Transfer', 'UPI', 'Cheque']}
-            selectedValue={paymentMethod}
-            onValueChange={n => setPaymentMethod(n)}
+            data={paymentMethods}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
           />
+
           <Text style={styles.label}>Income Amount</Text>
           <TextInput
             style={styles.input}
@@ -367,36 +354,36 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.4)',
-  justifyContent: 'center',
-  padding: 16,
-},
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 16,
+  },
 
-modalContent: {
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  padding: 16,
-},
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+  },
 
-modalTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  textAlign: 'center',
-  marginBottom: 12,
-},
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
 
-modalCancel: {
-  marginTop: 12,
-  paddingVertical: 12,
-},
+  modalCancel: {
+    marginTop: 12,
+    paddingVertical: 12,
+  },
 
-modalCancelText: {
-  textAlign: 'center',
-  fontSize: 16,
-  color: '#EF4444',
-  fontWeight: '600',
-},
+  modalCancelText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
 
   optionItem: {
     padding: 16,
